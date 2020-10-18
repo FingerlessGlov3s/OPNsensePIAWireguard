@@ -102,7 +102,6 @@ def new_getaddrinfo(*args):
     When a dns request is made this function is called and will provide an IP from our cache before looking it up
     """
     if args[0] in dns_cache:
-        #print("Forcing FQDN: {} to IP: {}".format(args[0], dns_cache[args[0]]))
         return prv_getaddrinfo(dns_cache[args[0]], *args[1:])
     return prv_getaddrinfo(*args)
 socket.getaddrinfo = new_getaddrinfo
@@ -372,6 +371,12 @@ if serverChange:
     if r.status_code != 200:
         quit("addClient request failed non 200 status code -  trying update WG client (peer) to acquired PIA settings")
 
+    # When a dynmatic gateway is used, we need to set the gateway in a tmp file, so OPNsense gateway can pickup on it
+    # https://docs.opnsense.org/manual/gateways.html#missing-dynamic-gateway
+    dynamticGatewayFile = f"/tmp/wg{opnsenseWGInstance}_router"
+    with open(dynamticGatewayFile, 'w') as filetowrite:
+        filetowrite.write(wireguardServerInfo['server_vip'])
+        printDebug(f"Saved server_vip to {dynamticGatewayFile}")
 
     # Apply and enable WireGuard changes.
     # First enable WireGuard if its not
@@ -390,14 +395,6 @@ if serverChange:
     r = requests.post(f'{opnsenseURL}/api/wireguard/service/reconfigure/{opnsenseWGPeerUUID}', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
         quit("reconfigure request failed non 200 status code - trying to apply all wireguard changes")
-
-    # We need to record the server VIP as we need to use this as the gateway in OPNsense
-    # When a dynmatic gateway is used the tunnel software, in this case needs to write its gateway to a tmp file, so OPNsense gateway can pickup on it
-    # https://docs.opnsense.org/manual/gateways.html#missing-dynamic-gateway
-    dynamticGatewayFile = f"/tmp/wg{opnsenseWGInstance}_router"
-    with open(dynamticGatewayFile, 'w') as filetowrite:
-        filetowrite.write(wireguardServerInfo['server_vip'])
-        printDebug(f"Saved server_vip to {dynamticGatewayFile}")
 
 #
 # Port forward section

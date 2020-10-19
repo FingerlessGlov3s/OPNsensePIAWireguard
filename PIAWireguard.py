@@ -63,7 +63,7 @@ opnsensePiaPortUUID = ""
 
 piaServerList = 'https://serverlist.piaservers.net/vpninfo/servers/v4'
 piaToken = ''
-piaCA = 'ca.rsa.4096.crt'
+piaCA = '/conf/ca.rsa.4096.crt'
 piaPort = ''
 piaPortSignature = ''
 
@@ -121,7 +121,8 @@ def printDebug(text):
 # List current wireguard instances looking for PIA one
 r = requests.get(f'{opnsenseURL}/api/wireguard/server/searchServer/', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
 if r.status_code != 200:
-    quit("searchServer request failed non 200 status code - listing wireguard instances")
+    print("searchServer request failed non 200 status code - listing wireguard instances")
+    sys.exit(2)
 
 wireguardInstances = json.loads(r.text)['rows']
 
@@ -146,12 +147,14 @@ if opnsenseWGUUID == '':
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/wireguard/server/addServer/', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("addServer request failed non 200 status code - trying to add wireGuard Instance")
+        print("addServer request failed non 200 status code - trying to add wireGuard Instance")
+        sys.exit(2)
 
     # get UUID of the PIA WG instance now its created
     r = requests.get(f'{opnsenseURL}/api/wireguard/server/searchServer/', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("searchServer request failed non 200 status code - getting our PIA instance GUID")
+        print("searchServer request failed non 200 status code - getting our PIA instance GUID")
+        sys.exit(2)
 
     wireguardInstances = json.loads(r.text)
 
@@ -164,7 +167,8 @@ if opnsenseWGUUID == '':
 # Get PIA WG instance information, so we can check if the PIA client (peer) has been added
 r = requests.get(f'{opnsenseURL}/api/wireguard/server/getServer/{opnsenseWGUUID}', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
 if r.status_code != 200:
-    quit("getServer request failed non 200 status code - getting PIA server information")
+    print("getServer request failed non 200 status code - getting PIA server information")
+    sys.exit(2)
 
 wireguardInstanceInfo = json.loads(r.text)['server']
 opnsenseWGInstance = wireguardInstanceInfo['instance'] # get instance number for working out wg0 interface name etc, later on
@@ -178,7 +182,8 @@ if opnsenseWGPeerSelected is False:
     # List current WG clients(peers) looking for PIA one, so we can add it.
     r = requests.get(f'{opnsenseURL}/api/wireguard/client/searchClient/', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("searchClient request failed non 200 status code - listing wireguard clients")
+        print("searchClient request failed non 200 status code - listing wireguard clients")
+        sys.exit(2)
 
     wireguardsClients = json.loads(r.text)['rows']
     for client in wireguardsClients:
@@ -200,13 +205,15 @@ if opnsenseWGPeerUUID == '':
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/wireguard/client/addClient/', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("addClient request failed non 200 status code - trying to add new wireGuard client (peer)")
+        print("addClient request failed non 200 status code - trying to add new wireGuard client (peer)")
+        sys.exit(2)
 
 
 # Now we know we have the WG client (peer) we needs its UUID and pubkey
 r = requests.get(f'{opnsenseURL}/api/wireguard/client/searchClient/', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
 if r.status_code != 200:
-    quit("searchServer request failed non 200 status code - listing wireguard clients looking for newly created")
+    print("searchServer request failed non 200 status code - listing wireguard clients looking for newly created")
+    sys.exit(2)
 
 wireguardsClients = json.loads(r.text)['rows']
 for client in wireguardsClients:
@@ -220,7 +227,8 @@ if opnsenseWGPeerSelected is False:
     r = requests.get(f'{opnsenseURL}/api/wireguard/server/getServer/{opnsenseWGUUID}', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
 
     if r.status_code != 200:
-        quit("getServer request failed non 200 status code - adding peer to server")
+        print("getServer request failed non 200 status code - adding peer to server")
+        sys.exit(2)
 
     wireguardInstanceInfo = json.loads(r.text)
     wireguardInstanceInfo['server']['peers'] = opnsenseWGPeerUUID
@@ -231,7 +239,8 @@ if opnsenseWGPeerSelected is False:
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/wireguard/server/setServer/{opnsenseWGUUID}', data=json.dumps(wireguardInstanceInfo), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("addClient request failed non 200 status code - trying to add wireGuard client (peer) to wireguard Instance")
+        print("addClient request failed non 200 status code - trying to add wireGuard client (peer) to wireguard Instance")
+        sys.exit(2)
 
 # Print some debug information
 printDebug(f"WGInstanceUUID: {opnsenseWGUUID}")
@@ -246,7 +255,8 @@ if debugMode and opnsenseWGPeerPubkey == '':
 # get handshake information, just need to look for the peer and see its there, we can then check when the handshake was, reported in epoch
 r = requests.get(f'{opnsenseURL}/api/wireguard/service/showhandshake/', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
 if r.status_code != 200:
-    quit("showhandshake request failed non 200 status code - getting handshake information")
+    print("showhandshake request failed non 200 status code - getting handshake information")
+    sys.exit(2)
 
 linesOfConf = json.loads(r.text)['response'].split('\n')
 foundWGPeer = False
@@ -290,7 +300,7 @@ if serverChange:
     # couldn't find region, make sure the piaRegionId is set correctly
     if wantedRegion is None:
         print("region not found, correct piaRegionId set?")
-        quit()
+        sys.exit(2)
 
     # print some useful debug information about what servers
     printDebug("metaServer")
@@ -303,7 +313,8 @@ if serverChange:
     override_dns(wantedRegion['servers']['meta'][0]['cn'], wantedRegion['servers']['meta'][0]['ip'])
     generateTokenResponse = requests.get(f"https://{wantedRegion['servers']['meta'][0]['cn']}/authv3/generateToken", auth=(piaUsername, piaPassword), verify=piaCA)
     if generateTokenResponse.status_code != 200:
-        quit("wireguardserver generateToken request failed non 200 status code - Trying to get PIA token")
+        print("wireguardserver generateToken request failed non 200 status code - Trying to get PIA token")
+        sys.exit(2)
     piaToken = json.loads(generateTokenResponse.text)['token']
 
     createObject = {
@@ -320,7 +331,8 @@ if serverChange:
     # Get PIA wireguard server connection information
     wireguardResponse = requests.get(f"https://{wantedRegion['servers']['wg'][0]['cn']}:1337/addKey", params=createObject, verify=piaCA)
     if wireguardResponse.status_code != 200:
-        quit("wireguardserver addKey request failed non 200 status code - Trying to add instance public key to server in exchnage for connection information")
+        print("wireguardserver addKey request failed non 200 status code - Trying to add instance public key to server in exchnage for connection information")
+        sys.exit(2)
     wireguardServerInfo = json.loads(wireguardResponse.text)
     printDebug("WG Server connection information")
     printDebug(wireguardResponse.text)
@@ -339,7 +351,8 @@ if serverChange:
     # first we get the current settings for the WG instance
     r = requests.get(f'{opnsenseURL}/api/wireguard/server/getServer/{opnsenseWGUUID}', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("getServer request failed non 200 status code - adding peer to server")
+        print("getServer request failed non 200 status code - adding peer to server")
+        sys.exit(2)
 
     # Make our necessary changes
     wireguardInstanceInfo = json.loads(r.text)
@@ -352,12 +365,14 @@ if serverChange:
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/wireguard/server/setServer/{opnsenseWGUUID}', data=json.dumps(wireguardInstanceInfo), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("setServer request failed non 200 status code - trying update WG instance to acquired PIA settings")
+        print("setServer request failed non 200 status code - trying update WG instance to acquired PIA settings")
+        sys.exit(2)
 
     # update PIA WG client (peer) instance, with the server side details
     r = requests.get(f'{opnsenseURL}/api/wireguard/client/getClient/{opnsenseWGPeerUUID}', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("getServer request failed non 200 status code - getting PIA WG client (peer)")
+        print("getServer request failed non 200 status code - getting PIA WG client (peer)")
+        sys.exit(2)
 
     wireguardPeerInstanceInfo = json.loads(r.text)
     wireguardPeerInstanceInfo['client']['serveraddress'] = wireguardServerInfo['server_ip']
@@ -369,7 +384,8 @@ if serverChange:
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/wireguard/client/setClient/{opnsenseWGPeerUUID}', data=json.dumps(wireguardPeerInstanceInfo), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("addClient request failed non 200 status code -  trying update WG client (peer) to acquired PIA settings")
+        print("addClient request failed non 200 status code -  trying update WG client (peer) to acquired PIA settings")
+        sys.exit(2)
 
     # When a dynmatic gateway is used, we need to set the gateway in a tmp file, so OPNsense gateway can pickup on it
     # https://docs.opnsense.org/manual/gateways.html#missing-dynamic-gateway
@@ -388,22 +404,24 @@ if serverChange:
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/wireguard/server/set/{opnsenseWGPeerUUID}', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("turn on wireguard request failed non 200 status code - trying to enable wireguard)")
+        print("turn on wireguard request failed non 200 status code - trying to enable wireguard)")
+        sys.exit(2)
     # Apply the wireguard saves (save button in the interface)
     createObject = {}
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/wireguard/service/reconfigure/{opnsenseWGPeerUUID}', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("reconfigure request failed non 200 status code - trying to apply all wireguard changes")
+        print("reconfigure request failed non 200 status code - trying to apply all wireguard changes")
+        sys.exit(2)
 
 #
 # Port forward section
 # Note the tunnel must be up for the port forward requests to work, as they go over the tunnel
 #
 
-# If portforward isn't requied, quit script otherwise carry on
+# If portforward isn't requied, exit script otherwise carry on
 if piaPortForward is False:
-    quit()
+    sys.exit(0)
 
 # first we need to check if we have a port forward signature.
 wireguardSignature = None
@@ -417,7 +435,8 @@ wireguardServerInfoFile = f"/tmp/wg{opnsenseWGInstance}_piaserverinfo"
 if os.path.isfile(wireguardServerInfoFile):
     wireguardServerInfo = json.loads(open(wireguardServerInfoFile, 'r').read())
 else:
-    quit("wireguard server information missing for port forward")
+    print("wireguard server information missing for port forward")
+    sys.exit(2)
 
 # store retrieved port in this file, so external services can easily get it
 piaPortFile = f"/usr/local/www/wg{opnsenseWGInstance}_port.txt"
@@ -454,7 +473,8 @@ if serverChange or newPortRequired:
         override_dns(wireguardServerInfo['server_name'], wireguardServerInfo['servermeta_ip'])
         generateTokenResponse = requests.get(f"https://{wireguardServerInfo['server_name']}/authv3/generateToken", auth=(piaUsername, piaPassword), verify=piaCA)
         if generateTokenResponse.status_code != 200:
-            quit("wireguardserver generateToken for port forward request failed non 200 status code - Trying to get PIA token")
+            print("wireguardserver generateToken for port forward request failed non 200 status code - Trying to get PIA token")
+            sys.exit(2)
         piaToken = json.loads(generateTokenResponse.text)['token']
 
     createObject = {
@@ -465,13 +485,15 @@ if serverChange or newPortRequired:
     # make a request to the WG server VIP and get our signature
     wireguardSignatureResponse = requests.get(f"https://{wireguardServerInfo['server_name']}:19999/getSignature", params=createObject, verify=piaCA)
     if wireguardSignatureResponse.status_code != 200:
-        quit("wireguardserver getSignature request failed non 200 status code - Trying to get a port foward signature")
+        print("wireguardserver getSignature request failed non 200 status code - Trying to get a port foward signature")
+        sys.exit(2)
     wireguardSignature = json.loads(wireguardSignatureResponse.text)
     printDebug("PIA Signature Port")
     printDebug(wireguardSignatureResponse.text)
 
     if wireguardSignature['status'] != 'OK':
-        quit("wireguardSignature status came back with not OK")
+        print("wireguardSignature status came back with not OK")
+        sys.exit(2)
 
     payloadInfo = json.loads(base64.b64decode(wireguardSignature['payload']))
     printDebug("PayloadInfo")
@@ -483,9 +505,9 @@ if serverChange or newPortRequired:
         filetowrite.write(str(payloadInfo['port']))
         printDebug(f"Saved port number to {piaPortFile}")
 
-# quit if portRefresh not required
+# exit if portRefresh not required
 if portRefresh is False:
-    quit()
+    sys.exit(0)
 
 # The requested port has a timer that needs to be refresh so you can keep the port.
 # Must be refreshed atleast every 15 minutes.
@@ -497,7 +519,8 @@ override_dns(wireguardServerInfo['server_name'], wireguardServerInfo['server_vip
 # make a request to the WG server VIP and get our signature
 wireguardPortResponse = requests.get(f"https://{wireguardServerInfo['server_name']}:19999/bindPort", params=createObject, verify=piaCA)
 if wireguardPortResponse.status_code != 200:
-    quit("wireguardserver bindPort request failed non 200 status code - Trying to get port and keep port active")
+    print("wireguardserver bindPort request failed non 200 status code - Trying to get port and keep port active")
+    sys.exit(2)
 wireguardPort = json.loads(wireguardPortResponse.text)
 printDebug("PIA Port Request")
 printDebug(wireguardPortResponse.text)
@@ -517,7 +540,8 @@ with open(portForwardSignatureFile, 'w') as filetowrite:
 opnsensePiaPortUpdated = False
 piaPortAliasResponse = requests.get(f"{opnsenseURL}/api/firewall/alias/getAliasUUID/{opnsensePiaPortName}", auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
 if r.status_code != 200:
-    quit("getAliasUUID request failed non 200 status code - Checking if the port forward alias exists")
+    print("getAliasUUID request failed non 200 status code - Checking if the port forward alias exists")
+    sys.exit(2)
 piaPortAlias = json.loads(piaPortAliasResponse.text)
 if piaPortAlias:
     opnsensePiaPortUUID = piaPortAlias['uuid']
@@ -536,13 +560,15 @@ if opnsensePiaPortUUID == '':
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/firewall/alias/addItem/', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("addItem request failed non 200 status code - trying to create the pia port forward alias")
+        print("addItem request failed non 200 status code - trying to create the pia port forward alias")
+        sys.exit(2)
     opnsensePiaPortUpdated = True
 else:
     # get current port alias information, so we can check its the right port
     piaPortAliasResponse = requests.get(f'{opnsenseURL}/api/firewall/alias/getItem/{opnsensePiaPortUUID}', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
-        quit("getItem request failed non 200 status code - Checking if the port forward alias is set correctly")
+        print("getItem request failed non 200 status code - Checking if the port forward alias is set correctly")
+        sys.exit(2)
     piaPortAlias = json.loads(piaPortAliasResponse.text)
     currentAliasPort = "0"
     for port in piaPortAlias['alias']['content']:
@@ -561,13 +587,14 @@ else:
         headers = {'content-type': 'application/json'}
         r = requests.post(f'{opnsenseURL}/api/firewall/alias/setItem/{opnsensePiaPortUUID}', data=json.dumps(piaPortAlias), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
         if r.status_code != 200:
-            quit("addItem request failed non 200 status code - trying to create the pia port forward alias")
+            print("addItem request failed non 200 status code - trying to create the pia port forward alias")
+            sys.exit(2)
         opnsensePiaPortUpdated = True
     else:
         printDebug("No port update required in OPNsense")
 
 if opnsensePiaPortUpdated is False:
-    quit()
+    sys.exit(0)
 
 # Apply alias changes
 
@@ -575,8 +602,10 @@ createObject = {}
 headers = {'content-type': 'application/json'}
 r = requests.post(f'{opnsenseURL}/api/firewall/alias/reconfigure/{opnsenseWGPeerUUID}', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
 if r.status_code != 200:
-    quit("reconfigure request failed non 200 status code - apply alias changes")
+    print("reconfigure request failed non 200 status code - apply alias changes")
+    sys.exit(2)
 
 #
 # Script finished
 #
+sys.exit(0)

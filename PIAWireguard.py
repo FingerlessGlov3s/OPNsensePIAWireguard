@@ -37,7 +37,7 @@ opnsenseWGPort = "51815"
 
 piaUsername = ""
 piaPassword = ""
-piaRegionId = "uk" # https://serverlist.piaservers.net/vpninfo/servers/v4 id's can be found in here
+piaRegionId = "uk" # https://serverlist.piaservers.net/vpninfo/servers/v4 id's can be found
 piaPortForward = False # Only enable this if you know what you are doing
 
 urlVerify = False # As we're connecting via local loopback I guess we don't really need to check the certificate. (I've noticed alot of people have the default self sigend anyway)
@@ -88,10 +88,10 @@ if len(sys.argv) > 1:
 
 # Function for DNS override taken from https://stackoverflow.com/a/60751327/3927406
 dns_cache = {}
-# Capture a dict of hostname and their IPs to override with
+# Capture a dictionary of hostname and their IPs to override with
 def override_dns(domain, ip):
     """
-    Adds dns entry in to out local dns cache for overriding
+    Adds dns entry in to dns cache dictionary, which is checked before dns lookup to allow us to override dns
     """
     dns_cache[domain] = ip
 prv_getaddrinfo = socket.getaddrinfo
@@ -99,7 +99,7 @@ prv_getaddrinfo = socket.getaddrinfo
 # if override is detected
 def new_getaddrinfo(*args):
     """
-    When a dns request is made this function is called and will provide an IP from our cache before looking it up
+    When address information is looked up, this function is called and will provide an IP from our cache dictionary before looking it up
     """
     if args[0] in dns_cache:
         return prv_getaddrinfo(dns_cache[args[0]], *args[1:])
@@ -109,7 +109,7 @@ socket.getaddrinfo = new_getaddrinfo
 # Debug Print
 def printDebug(text):
     """
-    Allows us to easily print debugging informance when debug param is passed through
+    Allows us to easily print debugging information when debug param is used
     """
     if debugMode:
         print(text)
@@ -278,6 +278,11 @@ if serverChange:
 if secondsDifferent < 190 and serverChange is False:
     printDebug(f"Tunnel working - last handshake {str(secondsDifferent)} seconds ago")
 else:
+    serverChange = True
+
+# If OPNsense is restarted, the gateway will lose its router pointer due to being in /tmp, so if it doesn't exist we need to change server.
+dynamticGatewayFile = f"/tmp/wg{opnsenseWGInstance}_router"
+if os.path.isfile(dynamticGatewayFile) is False:
     serverChange = True
 
 #
@@ -463,7 +468,7 @@ if wireguardSignature is not None:
         portRefresh = True
         printDebug("port refresh required")
 
-# first of we need to get a signature, signature lasts two months, we so only need to get it on serverChange. Server tent to reboot every 2-3 months anyway
+# first of we need to get a signature, signature lasts two months, we so only need to get it on serverChange. Server policy for reboots is every 2-3 months anyway
 # Might be a good idea to set cron to change PIA server every 2 month anyway
 if serverChange or newPortRequired:
     # Port refresh required to scheduled the Wireguard server adding the port.

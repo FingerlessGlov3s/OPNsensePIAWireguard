@@ -5,7 +5,12 @@ It will create Wireguard Instance(local) and Client(peer) on your OPNsense setup
 
 Warning: Advanced Users Recommended
 
-Prerequisites
+**What does it do**
+ 1. Creates WireGuard Interface in OPNsense
+ 2. Maintains connection to a PIA server (encase PIA server goes down) default check is every 5 minutes
+ 3. Allows rotation of PIA server on a user defined schedule
+
+**Prerequisites**
  1. OPNsense 20.7 onwards (prior versions not tested)
  2. WireGuard Plugin Installed
  3. SSH access enabled
@@ -26,7 +31,7 @@ Prerequisites
     9. Click Save
  2. Edit "PIAWireguard.py" and edit the user variables in the script with the api key from OPNsense, your PIA credentials and region id.
  3. Copying the following files to OPNsense using SCP or Filezilla etc 
-    - "PIAWireguard.py" and "ca.rsa.4096.crt" to "/conf"
+    - "PIAWireguard.py" and "ca.rsa.4096.crt" to "/conf/"
     - "actions_piawireguard.conf" to "/usr/local/opnsense/service/conf/actions.d"
  4. SSH to OPNsense and drop in to a terminal "option 8"
  5. Run the following commands
@@ -60,6 +65,7 @@ Prerequisites
  12. You'll need to create your own NAT and Firewall rules to use this tunnel, an advanced user should be able to do this.
 
 ***Port Forwarding***
+
 To use port forwarding Enable "piaPortForward" variable in the python script. This will create an alias in your system called PIA_Port, which you can then use in your Port Forwarding rule. This variable will self update when required.
 If you need a way to found out this port for an internal application, you can go to the following URL of your OPNsense to get the port, as its published publicly to devices that can reach the HTTPS port of OPNsense
 https://opnsense.lan/wg0_port.txt

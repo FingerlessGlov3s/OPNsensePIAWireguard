@@ -29,7 +29,7 @@ import urllib3
 import requests
 
 # User variables (changeable), do not change any other varibles you see
-opnsenseURL = "https://127.0.0.1:8443" # connect to webui via local loopback
+opnsenseURL = "https://127.0.0.1" # connect to webui via local loopback, if you use a different port for webui add ":8443" for example
 opnsenseKey = ""
 opnsenseSecret = ""
 opnsenseWGName = "PIA"

@@ -14,6 +14,7 @@ Warning: Advanced Users Recommended
  1. OPNsense 20.7 onwards (prior versions not tested)
  2. WireGuard Plugin Installed
  3. SSH access enabled
+ 4. HTTPS WebUI enabled (System: Settings: Administration -> Protocol: HTTPS)
 
 **Setup**
  1. Create new user called something on the lines of "WireguardAPI",

@@ -428,6 +428,10 @@ if serverChange:
 if piaPortForward is False:
     sys.exit(0)
 
+if serverChange:
+    print("Wait 5 seconds for new WireGuard server to apply before port forwarding")
+    time.sleep(5)
+
 # first we need to check if we have a port forward signature.
 wireguardSignature = None
 portForwardSignatureFile = f"/tmp/wg{opnsenseWGInstance}_piaportforwardsignature"

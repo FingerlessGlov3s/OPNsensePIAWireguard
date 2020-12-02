@@ -407,7 +407,7 @@ if serverChange:
             }
     }
     headers = {'content-type': 'application/json'}
-    r = requests.post(f'{opnsenseURL}/api/wireguard/server/set/{opnsenseWGPeerUUID}', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
+    r = requests.post(f'{opnsenseURL}/api/wireguard/general/set', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
     if r.status_code != 200:
         print("turn on wireguard request failed non 200 status code - trying to enable wireguard)")
         sys.exit(2)

@@ -361,6 +361,7 @@ if serverChange:
 
     # Make our necessary changes
     wireguardInstanceInfo = json.loads(r.text)
+    wireguardInstanceInfo['server']['enabled'] = '1'
     wireguardInstanceInfo['server']['peers'] = opnsenseWGPeerUUID
     wireguardInstanceInfo['server']['tunneladdress'] = wireguardServerInfo['peer_ip']
     wireguardInstanceInfo['server']['gateway'] = wireguardServerInfo['server_vip']
@@ -380,6 +381,7 @@ if serverChange:
         sys.exit(2)
 
     wireguardPeerInstanceInfo = json.loads(r.text)
+    wireguardPeerInstanceInfo['client']['enabled'] = '1'
     wireguardPeerInstanceInfo['client']['serveraddress'] = wireguardServerInfo['server_ip']
     wireguardPeerInstanceInfo['client']['serverport'] = wireguardServerInfo['server_port']
     wireguardPeerInstanceInfo['client']['pubkey'] = wireguardServerInfo['server_key']

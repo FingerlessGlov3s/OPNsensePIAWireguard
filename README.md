@@ -1,7 +1,7 @@
 OPNsense PIA Wireguard Script
 ===
 This script automates the process of getting Wireguard setup on OPNsense to connect to PIA's NextGen Wireguard servers.
-It will create Wireguard Instance(local) and Client(peer) on your OPNsense setup.
+It will create Wireguard Instance(Local) and Peer(Endpoint) on your OPNsense setup.
 
 Warning: Advanced Users Recommended
 

@@ -292,7 +292,7 @@ if os.path.isfile(dynamticGatewayFile) is False:
 # If server change is required, we'll grab a server IP from the PIA API
 if serverChange:
     # Get PIA Server List
-    r = requests.get(piaServerList, auth=(opnsenseKey, opnsenseSecret))
+    r = requests.get(piaServerList)
     serverList = json.loads(r.text.split('\n')[0])
 
     # Look for a pia server in the region we want.

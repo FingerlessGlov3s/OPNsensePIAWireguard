@@ -1,5 +1,5 @@
+import sys
 import json
-import urllib3
 import requests
 
 piaServerList = 'https://serverlist.piaservers.net/vpninfo/servers/v4'

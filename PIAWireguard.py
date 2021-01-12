@@ -68,7 +68,7 @@ piaPort = ''
 piaPortSignature = ''
 
 serverChange = False
-
+listRegions = False
 debugMode = False
 
 # Disable HTTPS verify warnings when Verify turned off
@@ -79,6 +79,8 @@ if len(sys.argv) > 1:
     for arg in sys.argv:
         if arg.lower() == "debug":
             debugMode = True
+        if arg.lower() == "listregions":
+            listRegions = True
         if arg.lower() == "changeserver":
             serverChange = True
 
@@ -117,6 +119,25 @@ def printDebug(text):
 #
 # Script logic
 #
+
+# Check if user wanted to list regions, and if so display them
+if listRegions:
+    r = requests.get(piaServerList)
+    if r.status_code != 200:
+        print("Failed to get PIA server list, url is returning non 200 HTTP code, is there a connectivity issue?")
+        sys.exit(2)
+    piaRegions = json.loads(r.text.split('\n')[0])['regions']
+    regionList = list()
+    for region in piaRegions:
+        regionList.append(region['name']+" | ID: "+region['id'] + " | Port forwarding: " + str(region['port_forward']) + " | Geo-located: " + str(region['geo']))
+    regionList.sort() # Now we sort the list as PIA's payload isn't in region name order.
+    for region in regionList:
+        print(region)
+    print("* Geo-located means these servers is not physically located in the region where the exit node is located. " +
+    "The implementation of geo-located servers has provided us VPN services in countries where service may not have been " +
+    "previously available due to restrictions, government legislation, or a lack of secure server providers")
+    # ^ Info from https://www.privateinternetaccess.com/helpdesk/kb/articles/geo-located-servers-we-offer
+    sys.exit(0)
 
 # List current wireguard instances looking for PIA one
 r = requests.get(f'{opnsenseURL}/api/wireguard/server/searchServer/', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
@@ -293,6 +314,9 @@ if os.path.isfile(dynamticGatewayFile) is False:
 if serverChange:
     # Get PIA Server List
     r = requests.get(piaServerList)
+    if r.status_code != 200:
+        print("Failed to get PIA server list, url is returning non 200 HTTP code, is there a connectivity issue?")
+        sys.exit(2)
     serverList = json.loads(r.text.split('\n')[0])
 
     # Look for a pia server in the region we want.

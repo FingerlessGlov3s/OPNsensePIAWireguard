@@ -31,6 +31,8 @@ Warning: Advanced Users Recommended
      8. Click Plus sign on API Keys, it'll download you the keys in a txt file. We'll want this later
      9. Click Save
  2. Edit "PIAWireguard.py" and edit the user variables in the script with the api key from OPNsense, your PIA credentials and region id.
+     - You can get your PIA region id by running ListRegions.py on your local device. If you don't have Python installed on your local device you can use this [Online Python Tool](https://www.programiz.com/python-programming/online-compiler/) copy the contents of the file and then press "Run". This will list the name and region id of each PIA region, for you choose from.
+     - It is also possible to get PIA region ids running the main script using the argument listregions
  3. Copying the following files to OPNsense using SCP or Filezilla etc 
      - "PIAWireguard.py" and "ca.rsa.4096.crt" to "/conf/"
      - "actions_piawireguard.conf" to "/usr/local/opnsense/service/conf/actions.d"

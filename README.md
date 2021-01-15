@@ -31,7 +31,7 @@ Warning: Advanced Users Recommended
      8. Click Plus sign on API Keys, it'll download you the keys in a txt file. We'll want this later
      9. Click Save
  2. Edit "PIAWireguard.py" and edit the user variables in the script with the api key from OPNsense, your PIA credentials and region id.
-     - You can get your PIA region id by running ListRegions.py on your local device. If you don't have Python installed on your local device you can use this [Online Python Tool](https://www.programiz.com/python-programming/online-compiler/) copy the contents of the file and then press "Run". This will list the name and region id of each PIA region, for you choose from.
+     - You can get your PIA region id by running ListRegions.py on your local device. If you don't have Python installed on your local device you can use this [Online Python Tool](https://www.programiz.com/python-programming/online-compiler/) copy the contents of the file and then click "Run". This will list the name and region id of each PIA region, for you choose from.
      - It is also possible to get PIA region ids running the main script using the argument listregions
  3. Copying the following files to OPNsense using SCP or Filezilla etc 
      - "PIAWireguard.py" and "ca.rsa.4096.crt" to "/conf/"
@@ -46,17 +46,17 @@ Warning: Advanced Users Recommended
      2. Give it a description like WAN_PIAWG
      3. Once selected click the + button
      4. A new WAN_PIAWG interface will show on the list, which will be the new wg interface, click on it to edit.
-     5. Tick "Enable Interface" and press save. nothing else
+     5. Tick "Enable Interface", click save and Apply Changes. nothing else
  7. Go to System: Gateways: Single, so we can set up the PIA gateway
      1. Top right Click Add
      2. Enter the name "WAN_PIAWG_IPv4"
      3. Interface select "WAN_PIAWG"
      4. Tick "Far Gateway"
      5. Untick "Disable Gateway Monitoring"
-     6. Click Save
+     6. Click Save and Apply Changes
  8. Go back to the SSH terminal, run the following command
      - /conf/PIAWireguard.py debug changeserver
- 9. Now OPNsense should be se tup to be able to use PIA as an internet gateway, if you go back in to System: Gateways: Single, you should see WAN_PIAWG_IPv4 now has a gateway
+ 9. Now OPNsense should be se tup to be able to use PIA as an internet gateway, if you go back in to System: Gateways: Single, you should see WAN_PIAWG_IPv4 now has a gateway IP and its pinging
  10. Now we need to set up a cron to make sure the tunnel says up and change server when necessary. Go to System: Settings: Cron
      1. Click the plus button at the bottom right of the table
      2. Enter "*/5" in the minute box

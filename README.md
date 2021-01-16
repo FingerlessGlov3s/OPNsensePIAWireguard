@@ -70,7 +70,8 @@ Warning: Advanced Users Recommended
      2. Interface select "WAN_PIAWG"
      3. Enter Description of "Maximum MSS for PIA WireGuard Tunnel"
      4. Max MSS to "1380"
-     5. Save (you will notice it'll now list this as OPT rather than the interface name, don't worry it's still correct, just edit it to verify you made the right selection)
+     5. Click Save (you will notice it'll now list this as OPT rather than the interface name, don't worry it's still correct, just edit it to verify you made the right selection)
+     6. Click Apply Changes
  12. OPNsense should now look after the tunnel itself encase the tunnel disconnects, every 5 minutes it'll check the status and change server if the server has gone down.
  13. You'll need to create your own NAT and Firewall rules to use this tunnel, an advanced user should be able to do this.
 

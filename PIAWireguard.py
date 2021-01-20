@@ -367,7 +367,7 @@ if serverChange:
     printDebug(wireguardResponse.text)
 
 
-    # Write wiregaurd connection information to file, for later use.
+    # Write wireguard connection information to file, for later use.
     # we need to add server name as well
     wireguardServerInfo['server_name'] = wantedRegion['servers']['wg'][0]['cn']
     wireguardServerInfo['servermeta_ip'] = wantedRegion['servers']['meta'][0]['ip']

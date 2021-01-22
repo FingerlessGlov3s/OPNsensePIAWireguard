@@ -8,7 +8,7 @@ Warning: Advanced Users Recommended
 **What does it do**
  1. Creates WireGuard Interface in OPNsense
  2. Maintains connection to a PIA server (encase PIA server goes down) default check is every 5 minutes
- 3. Allows rotation of PIA server on a user defined schedule
+ 3. Allows rotation of PIA server on a user defined schedule, create a cron job and add "changeserver" to the parameters
 
 **Prerequisites**
  1. OPNsense 20.7 onwards (prior versions not tested)

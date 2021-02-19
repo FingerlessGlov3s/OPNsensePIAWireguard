@@ -36,8 +36,9 @@ Warning: Advanced Users Recommended
      - Following User variables need filling in. (Between lines 34-45)
          - `opnsenseKey` WireguardAPI key you generated on step 1
          - `opnsenseSecret` WireguardAPI secret you generated on step 1
-         - `piaUsername` Your PIA username 
+         - `piaUsername` Your PIA username
          - `piaPassword` Your PIA password
+         - `piaRegionId` Change to your PIA region id
  3. Copying the following files to OPNsense using SCP or Filezilla etc, make sure you using the root user of OPNsense when you connect, otherwise you'll get access denied messages.
      - "PIAWireguard.py" and "ca.rsa.4096.crt" to "/conf/"
      - "actions_piawireguard.conf" to "/usr/local/opnsense/service/conf/actions.d"

@@ -1,7 +1,7 @@
 OPNsense PIA Wireguard Script
 ===
 This script automates the process of getting Wireguard set up on OPNsense to connect to PIA's NextGen Wireguard servers.
-It will create Wireguard Instance(Local) and Peer(Endpoint) on your OPNsense set up.
+It will create Wireguard Instance(Local) and Peer(Endpoint) on your OPNsense set up automaticly, it'll then maintain the tunnel to keep it up and connected.
 
 Warning: Advanced Users Recommended
 
@@ -13,7 +13,7 @@ Warning: Advanced Users Recommended
 **Prerequisites**
  1. OPNsense 20.7 onwards (prior versions not tested)
  2. WireGuard Plugin Installed
- 3. SSH access enabled
+ 3. Enable Secure Shell, Permit root user login and Permit password login (System: Settings: Administration -> Secure Shell) this can be reverted once the tunnel is working.
  4. HTTPS WebUI enabled (System: Settings: Administration -> Protocol: HTTPS)
 
 **Setup**
@@ -30,13 +30,18 @@ Warning: Advanced Users Recommended
          - VPN: Wireguard
      8. Click Plus sign on API Keys, it'll download you the keys in a txt file. We'll want this later
      9. Click Save
- 2. Edit "PIAWireguard.py" and edit the user variables in the script with the api key from OPNsense, your PIA credentials and region id.
+ 2. Edit "PIAWireguard.py" and edit the user variables in the script with the api key from OPNsense, your PIA credentials and region id. Use Notepad++ or your favourite IDE.
      - You can get your PIA region id by running ListRegions.py on your local device. If you don't have Python installed on your local device you can use this [Online Python Tool](https://www.programiz.com/python-programming/online-compiler/) copy the contents of the file and then click "Run". This will list the name and region id of each PIA region, for you choose from.
      - It is also possible to get PIA region ids running the main script using the argument listregions
- 3. Copying the following files to OPNsense using SCP or Filezilla etc 
+     - Following User variables need filling in. (Between lines 34-45)
+         - `opnsenseKey` WireguardAPI key you generated on step 1
+         - `opnsenseSecret` WireguardAPI secret you generated on step 1
+         - `piaUsername` Your PIA username 
+         - `piaPassword` Your PIA password
+ 3. Copying the following files to OPNsense using SCP or Filezilla etc, make sure you using the root user of OPNsense when you connect, otherwise you'll get access denied messages.
      - "PIAWireguard.py" and "ca.rsa.4096.crt" to "/conf/"
      - "actions_piawireguard.conf" to "/usr/local/opnsense/service/conf/actions.d"
- 4. SSH to OPNsense and drop in to a terminal "option 8"
+ 4. SSH to OPNsense and drop in to a terminal "option 8". You can use Putty on Windows to SSH
  5. Run the following commands
      - chmod +x /conf/PIAWireguard.py
      - service configd restart

@@ -41,7 +41,7 @@ Warning: Advanced Users Recommended
          - `piaRegionId` Change to your PIA region id
  3. Copying the following files to OPNsense using SCP or Filezilla etc, make sure you using the root user of OPNsense when you connect, otherwise you'll get access denied messages.
      - "PIAWireguard.py" and "ca.rsa.4096.crt" to "/conf/"
-     - "actions_piawireguard.conf" to "/usr/local/opnsense/service/conf/actions.d"
+     - "actions_piawireguard.conf" to "/usr/local/opnsense/service/conf/actions.d/"
  4. SSH to OPNsense and drop in to a terminal "option 8". You can use Putty on Windows to SSH
  5. Run the following commands
      - chmod +x /conf/PIAWireguard.py

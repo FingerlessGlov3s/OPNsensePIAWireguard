@@ -28,7 +28,10 @@ import json
 import urllib3
 import requests
 
-# User variables (changeable), do not change any other varibles you see
+#
+# User variables
+#
+
 opnsenseURL = "https://127.0.0.1" # connect to webui via local loopback, if you use a different port for webui add ":8443" for example
 opnsenseKey = ""
 opnsenseSecret = ""
@@ -42,7 +45,9 @@ piaPortForward = False # Only enable this if you know what you are doing
 
 urlVerify = False # As we're connecting via local loopback I guess we don't really need to check the certificate. (I've noticed alot of people have the default self sigend anyway)
 
-# end of User variables
+#
+# end of User variables, do not edit anything after this point
+#
 
 #
 # Script Start
@@ -137,6 +142,22 @@ if listRegions:
     "The implementation of geo-located servers has provided us VPN services in countries where service may not have been " +
     "previously available due to restrictions, government legislation, or a lack of secure server providers")
     # ^ Info from https://www.privateinternetaccess.com/helpdesk/kb/articles/geo-located-servers-we-offer
+    sys.exit(0)
+
+if opnsenseKey == '':
+    print("Please define opnsenseKey variable with the correct value")
+    sys.exit(0)
+
+if opnsenseSecret == '':
+    print("Please define opnsenseSecret variable with the correct value")
+    sys.exit(0)
+
+if piaUsername == '':
+    print("Please define piaUsername variable with the correct value")
+    sys.exit(0)
+
+if piaPassword == '':
+    print("Please define piaPassword variable with the correct value")
     sys.exit(0)
 
 # List current wireguard instances looking for PIA one

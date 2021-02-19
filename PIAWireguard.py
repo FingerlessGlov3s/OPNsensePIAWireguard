@@ -55,7 +55,7 @@ urlVerify = False # As we're connecting via local loopback I guess we don't real
 
 opnsenseWGUUID = ""
 opnsenseWGPubkey = ""
-opnsenseWGIP = "10.0.0.2"
+opnsenseWGIP = "192.0.0.2"
 opnsenseWGGateway = "192.0.0.1"
 opnsenseWGInstance = ""
 opnsenseWGPeerName = f"{opnsenseWGName}-Server"

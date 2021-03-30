@@ -81,13 +81,19 @@ Warning: Advanced Users Recommended
  12. OPNsense should now look after the tunnel itself encase the tunnel disconnects, every 5 minutes it'll check the status and change server if the server has gone down.
  13. You'll need to create your own NAT and Firewall rules to use this tunnel, an advanced user should be able to do this.
 
- Note: If your having speed issues, you may need to change PIA server region or lower the default MTU from 1420, advanced users should understand how to do this. 
+ Note: If your having speed issues, you may need to change PIA server region or lower the default MTU from 1420, advanced users should understand how to do this.
 
 ***Port Forwarding***
 
 To use port forwarding Enable "piaPortForward" variable in the python script. This will create an alias in your system called PIA_Port, which you can then use in your Port Forwarding rule. This variable will self update when required.
 If you need a way to found out this port for an internal application, you can go to the following URL of your OPNsense to get the port, as its published publicly to devices that can reach the HTTPS port of OPNsense
 https://opnsense.lan/wg0_port.txt
+
+***WireGuard kernel module***
+
+Since OPNsense 21.1.4, you can now enable the kernel module version of WireGuard on OPNsense, instead of using WireGuard-go implementation. Remember this is not classed as stable but maybe stable enough for your use case, home use for example.
+To enable simply install the kmod and reboot OPNsense `pkg install wireguard-kmod`
+
 
 "WireGuard" is a registered trademarks of Jason A. Donenfeld.
 "Private Internet Access" is owned by Private Internet Access, Inc. All Rights Reserved

@@ -131,8 +131,9 @@ def printDebug(text):
 if helpArg:
     print("Commands:")
     print("")
+    print("PIAWireguard.py                    Runs script normally")
     print("PIAWireguard.py help               Help text (This)")
-    print("PIAWireguard.py debug              Verbose output of the script")
+    print("PIAWireguard.py debug              Runs script with verbose output of the script")
     print("PIAWireguard.py listregions        Lists usable PIA regions for the script")
     print("PIAWireguard.py changeserver       Reconnect to a new PIA server")
     print("")

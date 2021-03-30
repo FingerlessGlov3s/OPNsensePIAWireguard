@@ -72,9 +72,10 @@ piaCA = '/conf/ca.rsa.4096.crt'
 piaPort = ''
 piaPortSignature = ''
 
-serverChange = False
-listRegions = False
+helpArg = False
 debugMode = False
+listRegions = False
+serverChange = False
 
 # Disable HTTPS verify warnings when Verify turned off
 if urlVerify is False:
@@ -82,6 +83,8 @@ if urlVerify is False:
 # Process any args added to the script
 if len(sys.argv) > 1:
     for arg in sys.argv:
+        if arg.lower() == "help":
+            helpArg = True
         if arg.lower() == "debug":
             debugMode = True
         if arg.lower() == "listregions":
@@ -124,6 +127,17 @@ def printDebug(text):
 #
 # Script logic
 #
+
+if helpArg:
+    print("Commands:")
+    print("")
+    print("PIAWireguard.py help               Help text (This)")
+    print("PIAWireguard.py debug              Verbose output of the script")
+    print("PIAWireguard.py listregions        Lists usable PIA regions for the script")
+    print("PIAWireguard.py changeserver       Reconnect to a new PIA server")
+    print("")
+    print("Source: https://github.com/FingerlessGlov3s/OPNsensePIAWireguard")
+    sys.exit(0)
 
 # Check if user wanted to list regions, and if so display them
 if listRegions:

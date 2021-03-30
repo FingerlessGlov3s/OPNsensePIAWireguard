@@ -95,7 +95,7 @@ Since OPNsense 21.1.4, you can now enable the kernel module version of WireGuard
 To enable simply install the kmod and reboot OPNsense `pkg install wireguard-kmod`
 
 
---
+---
 "WireGuard" is a registered trademarks of Jason A. Donenfeld.
 
 "Private Internet Access" is owned by Private Internet Access, Inc. All Rights Reserved

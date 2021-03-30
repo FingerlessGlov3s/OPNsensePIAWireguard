@@ -408,7 +408,7 @@ if serverChange:
     wireguardInstanceInfo = json.loads(r.text)
     wireguardInstanceInfo['server']['enabled'] = '1'
     wireguardInstanceInfo['server']['peers'] = opnsenseWGPeerUUID
-    wireguardInstanceInfo['server']['tunneladdress'] = wireguardServerInfo['peer_ip']
+    wireguardInstanceInfo['server']['tunneladdress'] = wireguardServerInfo['peer_ip'] + '/32' # need to add /32 so it does not expand to /8
     wireguardInstanceInfo['server']['gateway'] = wireguardServerInfo['server_vip']
     wireguardInstanceInfo['server']['dns'] = ''
     del wireguardInstanceInfo['server']['instance'] # remove this as its not required in the request

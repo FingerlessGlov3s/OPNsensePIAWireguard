@@ -91,9 +91,23 @@ https://opnsense.lan/wg0_port.txt
 
 ***WireGuard kernel module***
 
-Since OPNsense 21.1.4, you can now enable the kernel module version of WireGuard on OPNsense, instead of using WireGuard-go implementation. Remember this is not classed as stable but maybe stable enough for your use case, home use for example.
-To enable simply install the kmod and reboot OPNsense `pkg install wireguard-kmod`
+Since OPNsense 21.1.4, they now support the install the new kernel module implementation of WireGuard, its early days for the module and should be considered experimental.
 
+The WireGuard kernel module is new implementation of WireGuard for FreeBSD, which runs in the kernel space instead of user space using the WireGuard-go implementation. Giving us better performance and bandwidth. Performance increase of 2.5x and more has been observed in certain workloads. I have managed to get 1.1gbit throughput on PIA's WireGuard servers using this kernel module on OPNsense.
+
+If you wish to test and tryout the kernel module, simply install the kmod and reboot OPNsense `pkg install wireguard-kmod`. Note the `wireguard-go` will show as stopped due to it no longer being used since you'll then be using the kernel module.
+
+```
+At this time this code is new, unvetted, possibly buggy, and should be
+considered "experimental". It might contain security issues. We gladly
+welcome your testing and bug reports, but do keep in mind that this code
+is new, so some caution should be exercised at the moment for using it
+in mission critical environments.
+```
+
+Module is taken from https://www.freshports.org/net/wireguard-kmod/ which in turn is from https://git.zx2c4.com/wireguard-freebsd/.
+
+This kernel code is by Jason A. Donenfeld and others, not the version by Netgate.
 
 ---
 "WireGuard" is a registered trademarks of Jason A. Donenfeld.

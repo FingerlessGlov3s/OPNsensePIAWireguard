@@ -55,11 +55,12 @@ Warning: Advanced Users Recommended
      5. Tick "Enable Interface", click save and Apply Changes. nothing else
  7. Go to System: Gateways: Single, so we can set up the PIA gateway
      1. Top right Click Add
-     2. Enter the name "WAN_PIAWG_IPv4"
-     3. Interface select "WAN_PIAWG"
-     4. Tick "Far Gateway"
-     5. Untick "Disable Gateway Monitoring"
-     6. Click Save and Apply Changes
+     2. Make sure Disabled is unchecked
+     3. Enter the name "WAN_PIAWG_IPv4"
+     4. Interface select "WAN_PIAWG"
+     5. Tick "Far Gateway"
+     6. Untick "Disable Gateway Monitoring"
+     7. Click Save and Apply Changes
  8. Go back to the SSH terminal, run the following command
      - /conf/PIAWireguard.py debug changeserver
  9. Now OPNsense should be se tup to be able to use PIA as an internet gateway, if you go back in to System: Gateways: Single, you should see WAN_PIAWG_IPv4 now has a gateway IP and its pinging

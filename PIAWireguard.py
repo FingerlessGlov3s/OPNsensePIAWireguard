@@ -43,6 +43,8 @@ piaPassword = ""
 piaRegionId = "uk" # https://serverlist.piaservers.net/vpninfo/servers/v4 id's can be found
 piaPortForward = False # Only enable this if you know what you are doing
 
+tunnelGateway = None # When running a dual WAN configuration you may want to select which gateway gets used for the PIA wireguard tunnel. You can do this by getting the IPv4 gateway name from 'System: Gateways: Single' in the webui for example 'WAN_DHCP'. Most users will not have to configure this.
+
 urlVerify = False # As we're connecting via local loopback I guess we don't really need to check the certificate. (I've noticed alot of people have the default self sigend anyway)
 
 #
@@ -65,6 +67,7 @@ opnsenseWGPeerPubkey = ""
 opnsenseWGPeerPort = ""
 opnsensePiaPortName = f"{opnsenseWGName}_Port"
 opnsensePiaPortUUID = ""
+opnsenseRouteUUID = ""
 
 piaServerList = 'https://serverlist.piaservers.net/vpninfo/servers/v4'
 piaToken = ''
@@ -373,6 +376,79 @@ if serverChange:
     printDebug("wgServer")
     printDebug(wantedRegion['servers']['wg'])
 
+    # If tunnelGateway configured we need to add the route, to force the PIA wg tunnel over the wanted WAN
+    if tunnelGateway is not None:
+        routeUpdated = False
+        printDebug("tunnelGateway has been configured, will setup static route for PIA tunnel, to enforce outgoing gateway")
+        # List current routes and check if one for PIA already exists
+        r = requests.get(f'{opnsenseURL}/api/routes/routes/searchRoute/', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
+        if r.status_code != 200:
+            print("searchRoute request failed non 200 status code - listing routing to see if one already exists")
+            sys.exit(2)
+
+        opnsenseRoutes = json.loads(r.text)['rows']
+        for route in opnsenseRoutes:
+            if route['descr'] == opnsenseWGPeerName:
+                opnsenseRouteUUID = route['uuid']
+                break
+
+        # if the PIA server route can't be found create it
+        if opnsenseRouteUUID == '':
+            createObject = {
+                "route": {
+                    "disabled": '0',
+                    "network": wantedRegion['servers']['wg'][0]['ip'] + '/32',
+                    "gateway": tunnelGateway,
+                    "descr": opnsenseWGPeerName
+                    }
+            }
+            headers = {'content-type': 'application/json'}
+            r = requests.post(f'{opnsenseURL}/api/routes/routes/addRoute/', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
+            if r.status_code != 200:
+                print("addroute request failed non 200 status code - trying to add new OPNsense route, make sure gateway name is correct")
+                sys.exit(2)
+            routeUpdated = True
+        else:
+            # get current route, check and amend if necessary
+            r = requests.get(f'{opnsenseURL}/api/routes/routes/getRoute/{opnsenseRouteUUID}', auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
+            if r.status_code != 200:
+                print("getRoute request failed non 200 status code - Getting current PIA route")
+                sys.exit(2)
+            currentRoute = json.loads(r.text)
+            currentRoutedIP = currentRoute['route']['network']
+            for gateway in currentRoute['route']['gateway']:
+                if currentRoute['route']['gateway'][gateway]['selected'] == 1:
+                    currentGateway = gateway
+
+            printDebug(f"Current Tunnel Gateway: {str(currentGateway)}")
+            printDebug(f"Required Tunnel Gateway: {str(tunnelGateway)}")
+            printDebug(f"Current Routed IP: {str(currentRoutedIP)}")
+            printDebug(f"Required Routed IP: {str(wantedRegion['servers']['wg'][0]['ip']+'/32')}")
+            if currentGateway is not tunnelGateway or currentRoutedIP is not wantedRegion['servers']['wg'][0]['ip']:
+                printDebug("Route update required")
+                currentRoute['route']['network'] = wantedRegion['servers']['wg'][0]['ip']+'/32'
+                currentRoute['route']['gateway'] = tunnelGateway
+                currentRoute['route']['disabled'] = 0
+
+                headers = {'content-type': 'application/json'}
+                r = requests.post(f'{opnsenseURL}/api/routes/routes/setRoute/{opnsenseRouteUUID}', data=json.dumps(currentRoute), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
+                if r.status_code != 200:
+                    print("setRoute request failed non 200 status code - trying to amend OPNsense route for PIA, make sure gateway name is correct")
+                    sys.exit(2)
+                routeUpdated = True
+            else:
+                printDebug("No PIA route update required")
+
+        # Apply the new static route if required
+        if routeUpdated:
+            createObject = {}
+            headers = {'content-type': 'application/json'}
+            r = requests.post(f'{opnsenseURL}/api/routes/routes/reconfigure/', data=json.dumps(createObject), headers=headers, auth=(opnsenseKey, opnsenseSecret), verify=urlVerify)
+            if r.status_code != 200:
+                print("reconfigure request failed non 200 status code - trying to apply PIA static route changes")
+                sys.exit(2)
+            printDebug(f"PIA tunnel ip now set to route over WAN gateway {tunnelGateway} via static route")
+
     # Get token from wanted region server - Tokens lasts 24 hours, so we can make our requests for a WG connection information and port is required
     # because PIA use custom certs which just have a SAN of their name eg london401, we have to put a temporary dns override in, to make it so london401 points to the meta IP
     override_dns(wantedRegion['servers']['meta'][0]['cn'], wantedRegion['servers']['meta'][0]['ip'])
@@ -390,7 +466,7 @@ if serverChange:
     printDebug("Your PIA Token, DO NOT GIVE THIS TO ANYONE")
     printDebug(generateTokenResponse.text)
 
-    # Now we have out PIA token, we can now request our WG connection information
+    # Now we have our PIA token, we can now request our WG connection information
     # because PIA use custom certs which just have a SAN of their name eg london401, we have to put a temporary dns override in, to make it so london401 points to the wg IP
     override_dns(wantedRegion['servers']['wg'][0]['cn'], wantedRegion['servers']['wg'][0]['ip'])
     # Get PIA wireguard server connection information

@@ -87,11 +87,19 @@ Note: If your having speed issues, you may need to change PIA server region or l
 
 ***Port Forwarding***
 
-To use port forwarding Enable "piaPortForward" variable in the python script. This will create an alias in your system called PIA_Port, which you can then use in your Port Forwarding rule. This variable will self update when required.
+To use port forwarding Enable `piaPortForward` variable in the python script. This will create an alias in your system called PIA_Port, which you can then use in your Port Forwarding rule. This variable will self update when required.
 If you need a way to found out this port for an internal application, you can go to the following URL of your OPNsense to get the port, as its published publicly to devices that can reach the HTTPS port of OPNsense
 https://opnsense.lan/wg0_port.txt
 
 Note: Not all server locations support port forwarding.
+
+***Set outgoing tunnel gateway (outgoing interface)***
+
+In some deployments, people may be running dual or even triple WAN configurations, in this case due to how WireGuard is configured in FreeBSD (OPNsense), it'll route the PIA tunnel over the default WAN interface. Some people will want to change this to use another WAN interface as the gateway to route the PIA tunnel over.
+
+To accommodate this functionality, this is built in to the script. You will need to get the name of your wanted gateway, for example `WAN2_DHCP`, then set this as the `tunnelGateway` variable value. When the script then runs it'll add/change a static route to enforce the PIA tunnel to use that gateway (interface).
+
+You'll find your gateway names in "System: Gateways: Single", making sure its the IPv4 one.
 
 ***WireGuard kernel module***
 

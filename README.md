@@ -27,6 +27,7 @@ Warning: Advanced Users Recommended
      7. Scroll down to you see "Effective Privileges", you want to give it the following permissions
          - Firewall: Alias: Edit
          - Firewall: Aliases
+         - System: Static Routes
          - VPN: Wireguard
      8. Click Plus sign on API Keys, it'll download you the keys in a txt file. We'll want this later
      9. Click Save

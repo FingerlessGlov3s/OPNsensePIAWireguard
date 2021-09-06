@@ -11,7 +11,7 @@ Warning: Advanced Users Recommended
  3. Allows rotation of PIA server on a user defined schedule, create a cron job and add "changeserver" to the parameters
 
 **Prerequisites**
- 1. OPNsense 20.7 onwards (prior versions not tested)
+ 1. OPNsense 21.7 onwards (prior versions not tested)
  2. WireGuard Plugin Installed
  3. Enable Secure Shell, Permit root user login and Permit password login (System: Settings: Administration -> Secure Shell) this can be reverted once the tunnel is working.
  4. HTTPS WebUI enabled (System: Settings: Administration -> Protocol: HTTPS)
@@ -31,17 +31,17 @@ Warning: Advanced Users Recommended
          - VPN: Wireguard
      8. Click Plus sign on API Keys, it'll download you the keys in a txt file. We'll want this later
      9. Click Save
- 2. Edit "PIAWireguard.py" and edit the user variables in the script with the api key from OPNsense, your PIA credentials and region id. Use Notepad++ or your favourite IDE.
+ 2. Edit "PIAWireguard.json" and edit the variables in the script with the api key from OPNsense, your PIA credentials and region id. Use Notepad++ or your favourite IDE.
      - You can get your PIA region id by running ListRegions.py on your local device. If you don't have Python installed on your local device you can use this [Online Python Tool](https://www.programiz.com/python-programming/online-compiler/) copy the contents of the file and then click "Run". This will list the name and region id of each PIA region, for you choose from.
      - It is also possible to get PIA region ids running the main script using the argument listregions
-     - Following User variables need filling in. (Between lines 34-45)
+     - Following variables need filling in.
          - `opnsenseKey` WireguardAPI key you generated on step 1
          - `opnsenseSecret` WireguardAPI secret you generated on step 1
          - `piaUsername` Your PIA username
          - `piaPassword` Your PIA password
          - `piaRegionId` Change to your PIA region id
  3. Copying the following files to OPNsense using SCP or Filezilla etc, make sure you using the root user of OPNsense when you connect, otherwise you'll get access denied messages.
-     - "PIAWireguard.py" and "ca.rsa.4096.crt" to "/conf/"
+     - "PIAWireguard.py", "PIAWireguard.json" and "ca.rsa.4096.crt" to "/conf/"
      - "actions_piawireguard.conf" to "/usr/local/opnsense/service/conf/actions.d/"
  4. SSH to OPNsense and drop in to a terminal "option 8". You can use Putty on Windows to SSH
  5. Run the following commands
@@ -88,8 +88,8 @@ Note: If your having speed issues, you may need to change PIA server region or l
 
 ***Port Forwarding***
 
-To use port forwarding Enable `piaPortForward` variable in the python script. This will create an alias in your system called PIA_Port, which you can then use in your Port Forwarding rule. This variable will self update when required.
-If you need a way to found out this port for an internal application, you can go to the following URL of your OPNsense to get the port, as its published publicly to devices that can reach the HTTPS port of OPNsense
+To use port forwarding Enable `piaPortForward` variable in the json file from `false` to `true`. This will create an alias in your system called PIA_Port, which you can then use in your Port Forwarding rule. This alias will self update when required.
+If you need a way to find out this port for an internal application, you can go to the following URL of your OPNsense to get the port, as its published publicly to devices that can reach the HTTPS port of OPNsense
 https://opnsense.lan/wg0_port.txt
 
 Note: Not all server locations support port forwarding.
@@ -98,7 +98,7 @@ Note: Not all server locations support port forwarding.
 
 In some deployments, people may be running dual or even triple WAN configurations, in this case due to how WireGuard is configured in FreeBSD (OPNsense), it'll route the PIA tunnel over the default WAN interface. Some people will want to change this to use another WAN interface as the gateway to route the PIA tunnel over.
 
-To accommodate this functionality, this is built in to the script. You will need to get the name of your wanted gateway, for example `WAN2_DHCP`, then set this as the `tunnelGateway` variable value. When the script then runs it'll add/change a static route to enforce the PIA tunnel to use that gateway (interface).
+To accommodate this functionality, this is built in to the script. You will need to get the name of your wanted gateway, for example `WAN2_DHCP`, then set this as the `tunnelGateway` variable value in the json file (value needs to be in double quotes). When the script then runs it'll add/change a static route to enforce the PIA tunnel to use that gateway (interface).
 
 You'll find your gateway names in "System: Gateways: Single", making sure its the IPv4 one.
 

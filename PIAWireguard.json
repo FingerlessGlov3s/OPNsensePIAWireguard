@@ -1,0 +1,12 @@
+{
+    "opnsenseURL": "https://127.0.0.1",
+    "opnsenseKey": "",
+    "opnsenseSecret": "",
+    "opnsenseWGName": "PIA",
+    "opnsenseWGPort": "51815",
+    "piaUsername": "",
+    "piaPassword": "",
+    "piaRegionId": "uk",
+    "piaPortForward": false,
+    "tunnelGateway": null
+}

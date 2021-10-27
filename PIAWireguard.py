@@ -454,7 +454,7 @@ if serverChange:
 
         # couldn't find region, make sure the piaRegionId is set correctly
         if piaMetaCn == '':
-            print("region not found, correct config['piaRegionId'] set?")
+            print("region not found, correct piaRegionId set?")
             sys.exit(2)
 
     # print some useful debug information about what servers

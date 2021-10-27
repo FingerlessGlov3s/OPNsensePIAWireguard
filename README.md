@@ -94,6 +94,12 @@ https://opnsense.lan/wg0_port.txt
 
 Note: Not all server locations support port forwarding.
 
+***Dedicated IP***
+
+If you have purchased a Dedicated IP from PIA. Add your DIP token to `piaDipToken` in the json file, then to enable the usage simply set `piaUseDip` to `true`. Remember PIA only give you the DIP token once, so make sure you have backed up the token somewhere.
+
+I have developed this functionality by reserve engineering the PIA client, at this moment in time manual connections for DIP is not offically supported by PIA.
+
 ***Set outgoing tunnel gateway (outgoing interface)***
 
 In some deployments, people may be running dual or even triple WAN configurations, in this case due to how WireGuard is configured in FreeBSD (OPNsense), it'll route the PIA tunnel over the default WAN interface. Some people will want to change this to use another WAN interface as the gateway to route the PIA tunnel over.

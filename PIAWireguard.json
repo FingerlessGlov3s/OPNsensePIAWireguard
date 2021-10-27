@@ -7,6 +7,8 @@
     "piaUsername": "",
     "piaPassword": "",
     "piaRegionId": "uk",
+    "piaDipToken": "",
     "piaPortForward": false,
+    "piaUseDip": false,
     "tunnelGateway": null
 }

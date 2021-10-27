@@ -58,12 +58,14 @@ requiredConfig = [
     "piaUsername",
     "piaPassword",
     "piaRegionId",
+    "piaDipToken",
     "piaPortForward",
+    "piaUseDip",
     "tunnelGateway"
 ]
 
 # Check config contains the right settings
-if requiredConfig != list(config.keys()):
+if requiredConfig.sort() != list(config.keys()).sort():
     print("Your config json is missing some settings, please check it against the repo.")
     sys.exit(1)
 
@@ -83,10 +85,16 @@ opnsensePiaPortUUID = ""
 opnsenseRouteUUID = ""
 
 piaServerList = 'https://serverlist.piaservers.net/vpninfo/servers/v4'
+piaTokenApi = 'https://www.privateinternetaccess.com/api/client/v2/token'
+piaDedicatedIpApi = 'https://www.privateinternetaccess.com/api/client/v2/dedicated_ip'
 piaToken = ''
 piaCA = os.path.join(sys.path[0], "ca.rsa.4096.crt")
 piaPort = ''
 piaPortSignature = ''
+piaMetaCn = ''
+piaMetaIp = ''
+piaWgCn = ''
+piaWgIp = ''
 urlVerify = False # As we're connecting via local loopback I guess we don't really need to check the certificate. (I've noticed alot of people have the default self sigend anyway)
 
 helpArg = False
@@ -194,6 +202,14 @@ if config['piaPassword'] == '':
 
 if config['opnsenseURL'] == '':
     print("Please define opnsenseURL variable with the correct value in the json file")
+    sys.exit(0)
+
+if config['piaUseDip'] == True and config['piaDipToken'] == '':
+    print("If you wish to use PIA Dedicated IP, please supply DIP Token in piaDipToken")
+    sys.exit(0)
+
+if config['piaUseDip'] != True and config['piaUseDip'] != False:
+    print("piaUseDip can only be true or false")
     sys.exit(0)
 
 opnsenseURL = config['opnsenseURL']
@@ -378,23 +394,76 @@ if serverChange:
         sys.exit(2)
     serverList = json.loads(r.text.split('\n')[0])
 
-    # Look for a pia server in the region we want.
-    # PIA API will give us one server per region, PIA will try give us the best one
-    wantedRegion = None
-    for region in serverList['regions']:
-        if region['id'] == config['piaRegionId']:
-            wantedRegion = region
+    if config['piaUseDip']:
+        createObject = {
+            "username": config['piaUsername'],
+            "password": config['piaPassword']
+        }
+        headers = {'content-type': 'application/json'}
+        generateTokenResponse = requests.post(piaTokenApi, data=json.dumps(createObject), headers=headers)
+        if generateTokenResponse.status_code != 200:
+            print("wireguardserver /v2/token request failed non 200 status code - Trying to get PIA token")
+            sys.exit(2)
+        piaToken = json.loads(generateTokenResponse.text)['token']
 
-    # couldn't find region, make sure the piaRegionId is set correctly
-    if wantedRegion is None:
-        print("region not found, correct config['piaRegionId'] set?")
-        sys.exit(2)
+        printDebug("Your PIA Token (Global), DO NOT GIVE THIS TO ANYONE")
+        printDebug(generateTokenResponse.text)
+
+        piaAuthHeaders = {
+            "Authorization": f"Token {piaToken}",
+            "content-type": "application/json"
+        }
+        piaDip = {
+            "tokens": [config['piaDipToken']]
+        }
+        dipDetailsResponse = requests.post(piaDedicatedIpApi, data=json.dumps(piaDip),headers=piaAuthHeaders)
+        if dipDetailsResponse.status_code != 200:
+            print("wireguardserver /v2/dedicated_ip request failed non 200 status code - Trying to get PIA DIP details")
+            sys.exit(2)
+        dipDetails = json.loads(dipDetailsResponse.text)[0]
+        printDebug("DIP Details")
+        printDebug(dipDetails)
+
+        if dipDetails['status'] != "active":
+            print("PIA DIP isn't active")
+            sys.exit(2)
+
+        piaWgCn = dipDetails['cn']
+        piaWgIp = dipDetails['ip']
+
+
+        # The DIP will belong to a region, so we need to find current region's meta server from the global server list.
+        for region in serverList['regions']:
+            if region['id'] == dipDetails['id']:
+                piaMetaCn = region['servers']['meta'][0]['cn']
+                piaMetaIp = region['servers']['meta'][0]['ip']
+        
+        # couldn't find region, make sure the piaRegionId is set correctly
+        if piaMetaCn == '':
+            print("region not found, for DIP, is there an issue with the DIP?")
+            sys.exit(2)
+    else:
+        # Look for a pia server in the region we want.
+        # PIA API will give us one server per region, PIA will try give us the best one
+        for region in serverList['regions']:
+            if region['id'] == config['piaRegionId']:
+                piaMetaCn = region['servers']['meta'][0]['cn']
+                piaMetaIp = region['servers']['meta'][0]['ip']
+                piaWgCn = region['servers']['wg'][0]['cn']
+                piaWgIp = region['servers']['wg'][0]['ip']
+
+        # couldn't find region, make sure the piaRegionId is set correctly
+        if piaMetaCn == '':
+            print("region not found, correct config['piaRegionId'] set?")
+            sys.exit(2)
 
     # print some useful debug information about what servers
     printDebug("metaServer")
-    printDebug(wantedRegion['servers']['meta'])
+    printDebug(piaMetaCn)
+    printDebug(piaMetaIp)
     printDebug("wgServer")
-    printDebug(wantedRegion['servers']['wg'])
+    printDebug(piaWgCn)
+    printDebug(piaWgIp)
 
     # If tunnelGateway is configured we need to add the route, to force the PIA wg tunnel over the wanted WAN
     if config['tunnelGateway'] is not None:
@@ -417,7 +486,7 @@ if serverChange:
             createObject = {
                 "route": {
                     "disabled": '0',
-                    "network": wantedRegion['servers']['wg'][0]['ip'] + '/32',
+                    "network": piaWgIp + '/32',
                     "gateway": config['tunnelGateway'],
                     "descr": opnsenseWGPeerName
                     }
@@ -443,10 +512,10 @@ if serverChange:
             printDebug(f"Current Tunnel Gateway: {str(currentGateway)}")
             printDebug(f"Required Tunnel Gateway: {str(config['tunnelGateway'])}")
             printDebug(f"Current Routed IP: {str(currentRoutedIP)}")
-            printDebug(f"Required Routed IP: {str(wantedRegion['servers']['wg'][0]['ip']+'/32')}")
-            if currentGateway is not config['tunnelGateway'] or currentRoutedIP is not wantedRegion['servers']['wg'][0]['ip']:
+            printDebug(f"Required Routed IP: {str(piaWgIp+'/32')}")
+            if currentGateway is not config['tunnelGateway'] or currentRoutedIP is not piaWgIp:
                 printDebug("Route update required")
-                currentRoute['route']['network'] = wantedRegion['servers']['wg'][0]['ip']+'/32'
+                currentRoute['route']['network'] = piaWgIp+'/32'
                 currentRoute['route']['gateway'] = config['tunnelGateway']
                 currentRoute['route']['disabled'] = 0
 
@@ -469,28 +538,39 @@ if serverChange:
                 sys.exit(2)
             printDebug(f"PIA tunnel ip now set to route over WAN gateway {config['tunnelGateway']} via static route")
 
-    # Get token from wanted region server - Tokens lasts 24 hours, so we can make our requests for a WG connection information and port is required
-    # because PIA use custom certs which just have a SAN of their name eg london401, we have to put a temporary dns override in, to make it so london401 points to the meta IP
-    override_dns(wantedRegion['servers']['meta'][0]['cn'], wantedRegion['servers']['meta'][0]['ip'])
-    generateTokenResponse = requests.get(f"https://{wantedRegion['servers']['meta'][0]['cn']}/authv3/generateToken", auth=(config['piaUsername'], config['piaPassword']), verify=piaCA)
-    if generateTokenResponse.status_code != 200:
-        print("wireguardserver generateToken request failed non 200 status code - Trying to get PIA token")
-        sys.exit(2)
-    piaToken = json.loads(generateTokenResponse.text)['token']
+    # Get PIA token from meta server for non DIP Servers
+    if config['piaUseDip'] == False:
+        # Get PIA token from wanted region server - Tokens lasts 24 hours, so we can make our requests for a WG connection information and port is required
+        # because PIA use custom certs which just have a SAN of their name eg london401, we have to put a temporary dns override in, to make it so london401 points to the meta IP
+        override_dns(piaMetaCn, piaMetaIp)
+        generateTokenResponse = requests.get(f"https://{piaMetaCn}/authv3/generateToken", auth=(config['piaUsername'], config['piaPassword']), verify=piaCA)
+        if generateTokenResponse.status_code != 200:
+            print("wireguardserver generateToken request failed non 200 status code - Trying to get PIA token")
+            sys.exit(2)
+        piaToken = json.loads(generateTokenResponse.text)['token']
 
-    createObject = {
-        "pt": piaToken,
-        "pubkey": opnsenseWGPubkey
-    }
+        printDebug("Your PIA Token (Meta), DO NOT GIVE THIS TO ANYONE")
+        printDebug(generateTokenResponse.text)
 
-    printDebug("Your PIA Token, DO NOT GIVE THIS TO ANYONE")
-    printDebug(generateTokenResponse.text)
-
-    # Now we have our PIA token, we can now request our WG connection information
+    # Now we have our PIA details, we can now request our WG connection information
     # because PIA use custom certs which just have a SAN of their name eg london401, we have to put a temporary dns override in, to make it so london401 points to the wg IP
-    override_dns(wantedRegion['servers']['wg'][0]['cn'], wantedRegion['servers']['wg'][0]['ip'])
+    override_dns(piaWgCn, piaWgIp)
     # Get PIA wireguard server connection information
-    wireguardResponse = requests.get(f"https://{wantedRegion['servers']['wg'][0]['cn']}:1337/addKey", params=createObject, verify=piaCA)
+    
+    # If we're using a DIP we need to authenicate using DIP token, otherwise used the PIA Token
+    wireguardResponse = None
+    if config['piaUseDip']:
+        createObject = {
+            "pubkey": opnsenseWGPubkey
+        }
+        wireguardResponse = requests.get(f"https://{piaWgCn}:1337/addKey", params=createObject, auth=(f"dedicated_ip_{config['piaDipToken']}",piaWgIp), verify=piaCA)
+    else:
+        createObject = {
+            "pt": piaToken,
+            "pubkey": opnsenseWGPubkey
+        }
+        wireguardResponse = requests.get(f"https://{piaWgCn}:1337/addKey", params=createObject, verify=piaCA)
+
     if wireguardResponse.status_code != 200:
         print("wireguardserver addKey request failed non 200 status code - Trying to add instance public key to server in exchnage for connection information")
         sys.exit(2)
@@ -501,8 +581,8 @@ if serverChange:
 
     # Write wireguard connection information to file, for later use.
     # we need to add server name as well
-    wireguardServerInfo['server_name'] = wantedRegion['servers']['wg'][0]['cn']
-    wireguardServerInfo['servermeta_ip'] = wantedRegion['servers']['meta'][0]['ip']
+    wireguardServerInfo['server_name'] = piaWgCn
+    wireguardServerInfo['servermeta_ip'] = piaMetaIp
     wireguardServerInfoFile = f"/tmp/wg{opnsenseWGInstance}_piaserverinfo"
     with open(wireguardServerInfoFile, 'w') as filetowrite:
         filetowrite.write(json.dumps(wireguardServerInfo))

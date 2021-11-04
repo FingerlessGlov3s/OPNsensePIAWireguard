@@ -31,12 +31,12 @@ Warning: Advanced Users Recommended
          - VPN: Wireguard
      8. Click Plus sign on API Keys, it'll download you the keys in a txt file. We'll want this later
      9. Click Save
- 2. Edit "PIAWireguard.json" and edit the variables in the script with the api key from OPNsense, your PIA credentials and region id. Use Notepad++ or your favourite IDE.
-     - You can get your PIA region id by running ListRegions.py on your local device. If you don't have Python installed on your local device you can use this [Online Python Tool](https://www.programiz.com/python-programming/online-compiler/) copy the contents of the file and then click "Run". This will list the name and region id of each PIA region, for you choose from.
-     - It is also possible to get PIA region ids running the main script using the argument listregions
+ 2. Edit "PIAWireguard.json" and edit the variables with the api keys from OPNsense, your PIA credentials and region id. Use Notepad++ or your favourite IDE.
+     - You can get your PIA region id by running `ListRegions.py` on your local device. If you don't have Python installed on your local device you can use this [Online Python Tool](https://www.programiz.com/python-programming/online-compiler/) copy the contents of the file and then click "Run". This will list the name and region id of each PIA region, for you choose from.
+     - It is also possible to get PIA region ids running the main script using the argument `listregions`
      - Following variables need filling in.
-         - `opnsenseKey` WireguardAPI key you generated on step 1
-         - `opnsenseSecret` WireguardAPI secret you generated on step 1
+         - `opnsenseKey` WireguardAPI key you downloaded from step 1 `apikeys.txt`
+         - `opnsenseSecret` WireguardAPI secret you downloaded from step 1  `apikeys.txt`
          - `piaUsername` Your PIA username
          - `piaPassword` Your PIA password
          - `piaRegionId` Change to your PIA region id
@@ -85,6 +85,12 @@ Warning: Advanced Users Recommended
      - There is now a [guide on OPNsense Docs](https://docs.opnsense.org/manual/how-tos/wireguard-selective-routing.html#step-7-create-an-alias-for-the-relevant-local-hosts-that-will-access-the-tunnel), which will help you here. Step 7 onwards.
 
 Note: If your having speed issues, you may need to change PIA server region or lower the default MTU from 1420, advanced users should understand how to do this.
+
+**Updating**
+
+Normally only the `PIAWireguard.py` script needs updating as the rest of the files and JSON file won't very change often. So if you only update the `PIAWireguard.py` file and then run it manually as a one off it will tell you if there's missing variables/settings from the JSON file. If it returns `json is missing some settings` you will need to update to the latest `PIAWireguard.json` file. Before you start backup your current JSON file, keep it safe and use it to reference the `opnsenseKey` and `opnsenseSecret` (`piaDipToken` if configured), as this is only given on API key creation. If you have lost these details, you can delete the API keys from the `WireguardAPI` API user and create new API key following step 1 part 8 again. Once everything is working you may delete your backed up file.
+
+If `actions_piawireguard.conf` or `ca.rsa.4096.crt` needs updating, I shall update this part of the readme, pointing this out otherwise stick to the information above for updating.
 
 ***Port Forwarding***
 

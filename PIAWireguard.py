@@ -830,11 +830,12 @@ else:
         piaPortAlias['alias']['type'] = 'port'
         piaPortAlias['alias']['counters'] = ''
         piaPortAlias['alias']['proto'] = ''
+        piaPortAlias['alias']['interface'] = ''
 
         headers = {'content-type': 'application/json'}
         r = requests.post(f'{opnsenseURL}/api/firewall/alias/setItem/{opnsensePiaPortUUID}', data=json.dumps(piaPortAlias), headers=headers, auth=(config['opnsenseKey'], config['opnsenseSecret']), verify=urlVerify)
         if r.status_code != 200:
-            print("addItem request failed non 200 status code - trying to create the pia port forward alias")
+            print("setItem request failed non 200 status code - trying to create the pia port forward alias")
             sys.exit(2)
         opnsensePiaPortUpdated = True
     else:

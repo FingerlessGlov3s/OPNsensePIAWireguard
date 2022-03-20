@@ -114,6 +114,11 @@ To accommodate this functionality, this is built in to the script. You will need
 
 You'll find your gateway names in "System: Gateways: Single", making sure its the IPv4 one.
 
+***qBitTorrent automatic port update***
+
+This feature can log into any qBitTorrent client that has the webUI enabled and is accessible from OPNsense and change the listen port to the one set by the `piaPortForward` feature. To use qBitTorrent port updating change `qbtUpdate` variable in the json file from `false` to `true`. You must also set the values for `qbtURL` (example: `"http://192.168.1.7:8080"`), `qbtUsername`, and `qbtPassword`. 
+**Note:** `piaPortForward` must also be set to `true`. 
+
 ***WireGuard kernel module***
 
 Since OPNsense 21.1.4, they now support the install the new kernel module implementation of WireGuard, its early days for the module and should be considered experimental.

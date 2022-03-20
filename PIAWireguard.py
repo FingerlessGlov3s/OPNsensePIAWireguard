@@ -61,7 +61,10 @@ requiredConfig = [
     "piaDipToken",
     "piaPortForward",
     "piaUseDip",
-    "tunnelGateway"
+    "tunnelGateway",
+    "qbtUpdate",
+    "qbtUsername",
+    "qbtPassword"
 ]
 
 # Check config contains the right settings
@@ -210,6 +213,26 @@ if config['piaUseDip'] == True and config['piaDipToken'] == '':
 
 if config['piaUseDip'] != True and config['piaUseDip'] != False:
     print("piaUseDip can only be true or false")
+    sys.exit(0)
+
+if config['qbtUpdate'] == True and config['piaPortForward'] != True:
+    print("If you wish to use qbtUpdate, please also enable piaPortForward in the json file")
+    sys.exit(0)
+
+if config['qbtUpdate'] != True and config['qbtUpdate'] != False:
+    print("qbtUpdate can only be true or false")
+    sys.exit(0)
+
+if config['qbtUpdate'] == True and config['qbtURL'] == '':
+    print("If you wish to use qbtUpdate, please define qbtURL variable in the json file")
+    sys.exit(0)
+
+if config['qbtUpdate'] == True and config['qbtUsername'] == '':
+    print("If you wish to use qbtUpdate, please define qbtUsername variable in the json file")
+    sys.exit(0)
+
+if config['qbtUpdate'] == True and config['qbtPassword'] == '':
+    print("If you wish to use qbtUpdate, please define qbtPassword variable in the json file")
     sys.exit(0)
 
 opnsenseURL = config['opnsenseURL']
@@ -852,6 +875,62 @@ r = requests.post(f'{opnsenseURL}/api/firewall/alias/reconfigure', data=json.dum
 if r.status_code != 200:
     print("reconfigure request failed non 200 status code - apply alias changes")
     sys.exit(2)
+
+#
+# qBitTorrent update section
+# Port forwarding must also be enabled and working
+#
+
+# Exit if qbtUpdate isn't enabled otherwise continue
+if config['qbtUpdate'] is False:
+    sys.exit(0)
+
+# Login to qBitTorrent server
+login = {
+    'username': config['qbtUsername'],
+    'password': config['qbtPassword']
+}
+
+referer = {
+    'Referer': config['qbtURL']
+}
+
+r = requests.post(f"{config['qbtURL']}/api/v2/auth/login", data= login, headers= referer)
+
+# Check for errors.
+if r.status_code != 200 and r.status_code != 403:
+    print("qbtUpdate login request failed on invalid status code, verify qbtURL")
+    sys.exit(2)
+
+if r.status_code == 403:
+    print("qbtUpdate login request failed, too many unsuccessful login attempts")
+    sys.exit(2)
+
+if r.content[slice(-1)] != b'Ok':
+    print("qbtUpdate login request failed, verify qbtUsername and qbtPassword")
+    sys.exit(2)
+
+# Store authentication cookie data
+cookie = {
+    'SID': r.cookies['SID']
+}
+
+# Check current qBitTorrent listen port
+r = requests.get(f"{config['qbtURL']}/api/v2/app/preferences", cookies= cookie)
+qbtPort = json.loads(r.content)['listen_port']
+print(f"qbtUpdate current listen_port is {qbtPort}")
+if qbtPort == wireguardSignature['port']:
+    print("qbtUpdate listen_port change not required")
+    sys.exit(0)
+
+# Set new qBitTorrent listen port
+newPort = {
+    'listen_port': wireguardSignature['port']
+}
+
+r = requests.post(f"{config['qbtURL']}/api/v2/app/setPreferences", cookies= cookie, data= {"json": json.dumps(newPort)}, headers= referer)
+if r.status_code == 200:
+    print(f"qbtUpdate listen_port changed successfully to {wireguardSignature['port']}")
 
 #
 # Script finished

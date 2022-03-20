@@ -10,5 +10,9 @@
     "piaDipToken": "",
     "piaPortForward": false,
     "piaUseDip": false,
-    "tunnelGateway": null
+    "tunnelGateway": null,
+    "qbtUpdate": false,
+    "qbtURL": "",
+    "qbtUsername": "",
+    "qbtPassword": ""
 }

@@ -85,7 +85,7 @@ opnsensePiaPortName = f"{config['opnsenseWGName']}_Port"
 opnsensePiaPortUUID = ""
 opnsenseRouteUUID = ""
 
-piaServerList = 'https://serverlist.piaservers.net/vpninfo/servers/v4'
+piaServerList = 'https://serverlist.piaservers.net/vpninfo/servers/v6'
 piaTokenApi = 'https://www.privateinternetaccess.com/api/client/v2/token'
 piaDedicatedIpApi = 'https://www.privateinternetaccess.com/api/client/v2/dedicated_ip'
 piaToken = ''

@@ -213,8 +213,9 @@ if config['piaUseDip'] != True and config['piaUseDip'] != False:
     print("piaUseDip can only be true or false")
     sys.exit(0)
 
-if config['opnsenseWGName'] == '' or not re.search("^[a-zA-Z0-9]*$", config['opnsenseWGName']):
-    print("Please define opnsenseWGName variable with the correct value in the json file. Allowed characters are 0-9, a-z, and A-Z")
+if config['opnsenseWGName'] == '' or not re.search("^([0-9a-zA-Z._\-]){1,64}$", config['opnsenseWGName']):
+    print("Please define opnsenseWGName variable with the correct value in the json file. " +
+    "Should be a string between 1 and 64 characters. Allowed characters are alphanumeric characters, dash and underscores.")
     sys.exit(0)
 
 opnsenseURL = config['opnsenseURL']

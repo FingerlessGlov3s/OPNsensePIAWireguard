@@ -221,7 +221,14 @@ if config['opnsenseWGName'] == '' or not re.search("^([0-9a-zA-Z._\-]){1,64}$", 
 opnsenseURL = config['opnsenseURL']
 
 # List current wireguard instances looking for PIA one
-r = requests.get(f'{opnsenseURL}/api/wireguard/server/searchServer/', auth=(config['opnsenseKey'], config['opnsenseSecret']), verify=urlVerify)
+try:
+    r = requests.get(f'{opnsenseURL}/api/wireguard/server/searchServer/', auth=(config['opnsenseKey'], config['opnsenseSecret']), verify=urlVerify)
+except:
+    print(f"Failed to connect to {opnsenseURL}, perhaps you've changed the WebUI port please append it (opnsenseURL) EG: https://127.0.0.1:8443")
+    sys.exit(2)
+if r.status_code == 401:
+    print("searchServer request unauthorized, please check permissions and API keys")
+    sys.exit(2)
 if r.status_code != 200:
     print("searchServer request failed non 200 status code - listing wireguard instances")
     sys.exit(2)

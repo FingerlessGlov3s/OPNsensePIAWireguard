@@ -844,6 +844,8 @@ else:
         piaPortAlias['alias']['counters'] = ''
         piaPortAlias['alias']['proto'] = ''
         piaPortAlias['alias']['interface'] = ''
+        if 'categories' in piaPortAlias['alias'].keys(): 
+            del piaPortAlias['alias']['categories']
 
         headers = {'content-type': 'application/json'}
         r = requests.post(f'{opnsenseURL}/api/firewall/alias/setItem/{opnsensePiaPortUUID}', data=json.dumps(piaPortAlias), headers=headers, auth=(config['opnsenseKey'], config['opnsenseSecret']), verify=urlVerify)

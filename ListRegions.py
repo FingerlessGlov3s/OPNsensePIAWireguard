@@ -1,7 +1,7 @@
 import json
 import requests
 
-piaServerList = 'https://serverlist.piaservers.net/vpninfo/servers/v4'
+piaServerList = 'https://serverlist.piaservers.net/vpninfo/servers/v6'
 
 s = True
 r = requests.get(piaServerList)

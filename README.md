@@ -11,7 +11,7 @@ Warning: Advanced Users Recommended
  3. Allows rotation of PIA server on a user defined schedule, create a cron job and add "changeserver" to the parameters
 
 **Prerequisites**
- 1. OPNsense 21.7 onwards (prior versions not tested)
+ 1. OPNsense 22.7 onwards (prior versions not tested)
  2. WireGuard Plugin Installed
  3. Enable Secure Shell, Permit root user login and Permit password login (System: Settings: Administration -> Secure Shell) this can be reverted once the tunnel is working.
  4. HTTPS WebUI enabled (System: Settings: Administration -> Protocol: HTTPS)
@@ -115,6 +115,8 @@ To accommodate this functionality, this is built in to the script. You will need
 You'll find your gateway names in "System: Gateways: Single", making sure its the IPv4 one.
 
 ***WireGuard kernel module***
+
+*OPNsense 23.1 onwards kernel module is now the default.*
 
 Since OPNsense 21.1.4, they now support the install the new kernel module implementation of WireGuard, its early days for the module and should be considered experimental.
 

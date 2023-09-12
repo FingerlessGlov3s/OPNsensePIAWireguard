@@ -243,10 +243,23 @@ for instance in wireguardInstances:
 
 # if the PIA WG instance doesn't exist we'll create it.
 if opnsenseWGUUID == '':
+    # Generate a key pair for the server
+    r = requests.get(f'{opnsenseURL}/api/wireguard/server/keyPair/', auth=(config['opnsenseKey'], config['opnsenseSecret']), verify=urlVerify)
+    if r.status_code != 200:
+        print("keyPair request filed non 200 status code - trying to generate wireGuard key pair")
+        sys.exit(2)
+
+    keyPair = json.loads(r.text)
+    if keyPair['status'] != "ok":
+        print("keyPair response non ok status - trying to generate wireGuard key pair")
+        sys.exit(2)
+
     createObject = {
         "server": {
             "enabled": '1',
             "name": config['opnsenseWGName'],
+            "pubkey": keyPair['pubkey'],
+            "privkey": keyPair['privkey'],
             "port": config['opnsenseWGPort'],
             "tunneladdress": opnsenseWGIP,
             "disableroutes": '1',

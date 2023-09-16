@@ -414,11 +414,20 @@ if os.path.isfile(dynamticGatewayFile) is False:
 # If server change is required, we'll grab a server IP from the PIA API
 if serverChange:
     # Get PIA Server List
-    r = requests.get(piaServerList)
-    if r.status_code != 200:
-        print("Failed to get PIA server list, url is returning non 200 HTTP code, is there a connectivity issue?")
+    try:
+        r = requests.get(piaServerList)
+        if r.status_code != 200:
+            print("Failed to get PIA server list, url is returning non 200 HTTP code, is there a connectivity issue?")
+            sys.exit(2)
+        serverList = json.loads(r.text.split('\n')[0])
+    except requests.exceptions.RequestException as e:
+        print("Failed to get PIA server list due to a request error:")
+        print(e)
         sys.exit(2)
-    serverList = json.loads(r.text.split('\n')[0])
+    except json.JSONDecodeError as e:
+        print("Failed to parse JSON response:")
+        print(e)
+        sys.exit(2)
 
     if config['piaUseDip']:
         createObject = {

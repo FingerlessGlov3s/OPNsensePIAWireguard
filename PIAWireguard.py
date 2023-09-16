@@ -494,11 +494,11 @@ if serverChange:
 
     # print some useful debug information about what servers
     printDebug("metaServer")
-    printDebug(piaMetaCn)
-    printDebug(piaMetaIp)
+    printDebug("CN: " + piaMetaCn)
+    printDebug("IP: " + piaMetaIp)
     printDebug("wgServer")
-    printDebug(piaWgCn)
-    printDebug(piaWgIp)
+    printDebug("CN: " + piaWgCn)
+    printDebug("IP: " + piaWgIp)
 
     # If tunnelGateway is configured we need to add the route, to force the PIA wg tunnel over the wanted WAN
     if config['tunnelGateway'] is not None:

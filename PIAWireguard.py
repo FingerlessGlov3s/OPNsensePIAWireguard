@@ -638,6 +638,8 @@ if serverChange:
     wireguardInstanceInfo['server']['gateway'] = wireguardServerInfo['server_vip']
     wireguardInstanceInfo['server']['dns'] = ''
     del wireguardInstanceInfo['server']['instance'] # remove this as its not required in the request
+    if 'carp_depend_on' in wireguardInstanceInfo['server'].keys(): 
+        del wireguardInstanceInfo['server']['carp_depend_on']
 
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/wireguard/server/setServer/{opnsenseWGUUID}', data=json.dumps(wireguardInstanceInfo), headers=headers, auth=(config['opnsenseKey'], config['opnsenseSecret']), verify=urlVerify)

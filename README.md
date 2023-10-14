@@ -1,7 +1,7 @@
 OPNsense PIA Wireguard Script
 ===
 This script automates the process of getting Wireguard set up on OPNsense to connect to PIA's NextGen Wireguard servers.
-It will create Wireguard Instance(Local) and Peer(Endpoint) on your OPNsense set up automaticly, it'll then maintain the tunnel to keep it up and connected.
+It will create Wireguard Instance and Peer on your OPNsense set up automaticly, it'll then maintain the tunnel to keep it up and connected.
 
 Warning: Advanced Users Recommended
 
@@ -31,7 +31,8 @@ Warning: Advanced Users Recommended
          - VPN: Wireguard
      8. Click Plus sign on API Keys, it'll download you the keys in a txt file. We'll want this later
      9. Click Save
- 1. SSH on to OPNsense, use putty on windows or ssh commandline, as ROOT. Run the below commands.
+ 1. SSH to OPNsense and drop in to a terminal `option 8`.
+ 1. as `root`. Run the below commands.
      - `fetch -o /conf https://raw.githubusercontent.com/FingerlessGlov3s/OPNsensePIAWireguard/main/PIAWireguard.py`
      - `fetch -o /conf https://raw.githubusercontent.com/FingerlessGlov3s/OPNsensePIAWireguard/main/ca.rsa.4096.crt`
      - `fetch -o /usr/local/opnsense/service/conf/actions.d https://raw.githubusercontent.com/FingerlessGlov3s/OPNsensePIAWireguard/main/actions_piawireguard.conf`
@@ -46,7 +47,7 @@ Warning: Advanced Users Recommended
          - `piaRegionId` Change to your PIA region id
  1. Copy the json file to OPNsense using SCP or Filezilla etc, make sure you using the root user of OPNsense when you connect, otherwise you'll get access denied messages.
      - `PIAWireguard.json` to `/conf/`
- 1. SSH to OPNsense and drop in to a terminal `option 8`.
+ 1. SSH to OPNsense and drop in to a terminal `option 8`. If you've closed the previous SSH connection.
  1. Run the following commands
      - `chmod +x /conf/PIAWireguard.py`
      - `service configd restart`
@@ -67,8 +68,8 @@ Warning: Advanced Users Recommended
      7. Click Save and Apply Changes
  1. Go back to the SSH terminal, run the following command
      - `/conf/PIAWireguard.py debug changeserver`
- 1. Now OPNsense should be se tup to be able to use PIA as an internet gateway, if you go back in to System: Gateways: Single, you should see `WAN_PIAWG_IPv4` now has a gateway IP and its pinging
- 1. Now we need to set up a cron to make sure the tunnel says up and change server when necessary. Go to System: Settings: Cron
+ 1. Now OPNsense should be setup to be able to use PIA as an internet gateway, if you go back in to System: Gateways: Single, you should see `WAN_PIAWG_IPv4` now has a gateway IP and its pinging
+ 1. Now we need to set up a cron to make sure the tunnel says up and changes server when necessary. Go to System: Settings: Cron
      1. Click the plus button at the bottom right of the table
      2. Enter `*/5` in the minute box
      3. Enter `*` in the hours box

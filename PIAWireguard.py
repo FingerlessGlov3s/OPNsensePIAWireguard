@@ -660,6 +660,7 @@ if serverChange:
     wireguardPeerInstanceInfo['client']['pubkey'] = wireguardServerInfo['server_key']
     wireguardPeerInstanceInfo['client']['tunneladdress'] = "0.0.0.0/0"
     wireguardPeerInstanceInfo['client']['keepalive'] = "25"
+    wireguardPeerInstanceInfo['client']['servers'] = opnsenseWGUUID
 
     headers = {'content-type': 'application/json'}
     r = requests.post(f'{opnsenseURL}/api/wireguard/client/setClient/{opnsenseWGPeerUUID}', data=json.dumps(wireguardPeerInstanceInfo), headers=headers, auth=(config['opnsenseKey'], config['opnsenseSecret']), verify=urlVerify)

@@ -11,7 +11,7 @@ Warning: Advanced Users Recommended
  3. Allows rotation of PIA server on a user defined schedule, create a cron job and add "changeserver" to the parameters
 
 **Prerequisites**
- 1. OPNsense 23.7.3 onwards
+ 1. OPNsense 23.7.10 onwards
  2. WireGuard Plugin Installed
  3. Enable Secure Shell, Permit root user login and Permit password login (System: Settings: Administration -> Secure Shell) this can be reverted once the tunnel is working.
  4. HTTPS WebUI enabled (System: Settings: Administration -> Protocol: HTTPS)
@@ -38,37 +38,41 @@ Warning: Advanced Users Recommended
      - `fetch -o /usr/local/opnsense/service/conf/actions.d https://raw.githubusercontent.com/FingerlessGlov3s/OPNsensePIAWireguard/main/actions_piawireguard.conf`
  1. Edit `PIAWireguard.json` and edit the variables with the api keys from OPNsense, your PIA credentials and region id. Use Notepad++ or your favourite IDE.
      - You can get your PIA region id by running `ListRegions.py` on your local device. If you don't have Python installed on your local device you can use this [Online Python Tool](https://paiza.io/en/projects/new?language=python3) copy the contents of the file and then click `Run`. This will list the name and region id of each PIA region, for you choose from.
-     - It is also possible to get PIA region ids running the main script using the argument `listregions`
+     - It is also possible to get PIA region ids running the main script using the argument `--listregions`
      - Following variables need filling in.
          - `opnsenseKey` WireguardAPI key you downloaded from step 1 `apikeys.txt`
          - `opnsenseSecret` WireguardAPI secret you downloaded from step 1  `apikeys.txt`
          - `piaUsername` Your PIA username
          - `piaPassword` Your PIA password
-         - `piaRegionId` Change to your PIA region id
+         - `instances` As we support creation of multiple tunnels, Example config has one instance but you can have as many as you like. The `instances` are key value pairs. Change `instancename` to something like `london` if you using the `uk` region since but the instance name can be what you'd like it to be.
+            - `regionId` Change to your PIA region id
+            - `portForward` Enable port forwarding (note region support required)
+            - `opnsenseWGPort` outgoing port for OPNsense, this needs to be different for each tunnel and not already be in use for something else on OPNsense
  1. Copy the json file to OPNsense using SCP or Filezilla etc, make sure you using the root user of OPNsense when you connect, otherwise you'll get access denied messages.
      - `PIAWireguard.json` to `/conf/`
  1. SSH to OPNsense and drop in to a terminal `option 8`. If you've closed the previous SSH connection.
  1. Run the following commands
      - `chmod +x /conf/PIAWireguard.py`
      - `service configd restart`
-     - `/conf/PIAWireguard.py debug`
- 1. Go to Interfaces: Assignments in OPNsense, so we can assign the new interface
+     - `/conf/PIAWireguard.py --debug`
+ 1. Go to Interfaces: Assignments in OPNsense, so we can assign the new interface for the tunnel/tunnels
      1. At the bottom of the interfaces you'll see `New interface`, on the drop down select `wg0`, unless you already had one set up then select `wg1` etc...
      2. Give it a description like `WAN_PIAWG`
      3. Once selected click the + button
-     4. A new `WAN_PIAWG` interface will show on the list, which will be the new wg interface, click on it to edit.
+     4. A new `WAN_PIAWG_INSTANCENAME` interface will show on the list, which will be the new wg interface, click on it to edit.
      5. Tick `Enable Interface`, click save and Apply Changes. nothing else
- 1. Go to System: Gateways: Single, so we can set up the PIA gateway
+ 1. Go to System: Gateways: Single, so we can set up the PIA gateway for the tunnel/tunnels
      1. Top right Click Add
      2. Make sure Disabled is unchecked
-     3. Enter the name `WAN_PIAWG_IPv4`
-     4. Interface select `WAN_PIAWG`
+     3. Enter the name `WAN_PIA_INSTANCENAME_IPv4`
+     4. Interface select `WAN_PIAWG_INSTANCENAME`
      5. Tick `Far Gateway`
      6. Untick `Disable Gateway Monitoring`
      7. Click Save and Apply Changes
+ 1. Also reccomended you set your Main gateway to have a lower Priority number than the created ones for the PIA tunnel
  1. Go back to the SSH terminal, run the following command
-     - `/conf/PIAWireguard.py debug changeserver`
- 1. Now OPNsense should be setup to be able to use PIA as an internet gateway, if you go back in to System: Gateways: Single, you should see `WAN_PIAWG_IPv4` now has a gateway IP and its pinging
+     - `/conf/PIAWireguard.py --debug --changeserver instancename`
+ 1. Now OPNsense should be setup to be able to use PIA as an internet gateway, if you go back in to System: Gateways: Single, you should see `WAN_PIA_INSTANCENAME_IPv4` now has a gateway IP and its pinging
  1. Now we need to set up a cron to make sure the tunnel says up and changes server when necessary. Go to System: Settings: Cron
      1. Click the plus button at the bottom right of the table
      2. Enter `*/5` in the minute box
@@ -79,7 +83,7 @@ Warning: Advanced Users Recommended
  1. Last thing we need to set up is maximum MSS for TCP packets, which is 40 bytes smaller than the MTU of WireGuard, by default Wireguard uses 1420 bytes MTU. So we need to set an MSS maximum of 1380. (Without this you may have issues loading websites or slow speeds).
  Goto Firewall: Settings: Normalization
      1. Click Add
-     2. Interface select `WAN_PIAWG`
+     2. Interface select `WAN_PIA_INSTANCENAME_IPv4`
      3. Enter Description of `Maximum MSS for PIA WireGuard Tunnel`
      4. Max MSS to `1380`
      5. Click Save (you will notice it'll now list this as OPT rather than the interface name, don't worry it's still correct, just edit it to verify you made the right selection)
@@ -92,13 +96,25 @@ Note: If your having speed issues, you may need to change PIA server region or l
 
 **Updating**
 
-Normally only the `PIAWireguard.py` script needs updating as the rest of the files and JSON file won't very change often. So if you only update the `PIAWireguard.py` file and then run it manually as a one off it will tell you if there's missing variables/settings from the JSON file. If it returns `json is missing some settings` you will need to update to the latest `PIAWireguard.json` file. Before you start backup your current JSON file, keep it safe and use it to reference the `opnsenseKey` and `opnsenseSecret` (`piaDipToken` if configured), as this is only given on API key creation. If you have lost these details, you can delete the API keys from the `WireguardAPI` API user and create new API key following step 1 part 8 again. Once everything is working you may delete your backed up file.
+Since 2024/01/05 the script has gone a complete overhaul, upgrade steps are
+1. Disable the cron entry.
+1. Populate the new `PIAWireguard.json` based on your old config file and the information above
+1. Upload new `PIAWireguard.py` and `PIAWireguard.json` file to `/conf/`
+1. There's a few bits in the WireGuard section in OPNsense you need to rename
+    1. Rename current WG instance name to `pia-{instancename}` from `PIA`
+    1. Rename current WG peer to `pia-{instancename}-server` from `PIA-Server`
+1. If your using port forwarding rename the alias to `pia_{instancename}_port` from `PIA_Port` 
+1. Ensure you applied all changes
+1. Run the new script via SSH in debug mode and ensure it's working `python3 PIAWireguard.py --debug`, should return `No tunnels need attention` as the last log entry
+1. Then run again but this time forcing a it to change server `python3 PIAWireguard.py --debug --changeserver instancename`
+1. If all is working correctly, then re-able the cron entry
+1. Now double check all your configured routes and rules, ensure IP leaking isn't happening etc
 
-Rerun the commands from step 2 to upgrade all required files. 
+See releases, starting from the version you have installed, to see if there's anything you need to do, usually it's just upgrade the py script itself.
 
 ***Port Forwarding***
 
-To use port forwarding Enable `piaPortForward` variable in the json file from `false` to `true`. This will create an alias in your system called PIA_Port, which you can then use in your Port Forwarding rule. This alias will self update when required.
+To use port forwarding Enable `portForward` variable in the json file for the intance from `false` to `true`. This will create an alias in your system called `pia_instancename_port`, which you can then use in your Port Forwarding rule. This alias will self update when required.
 If you need a way to find out this port for an internal application, you can go to the following URL of your OPNsense to get the port, as its published publicly to devices that can reach the HTTPS port of OPNsense
 https://opnsense.lan/wg0_port.txt
 
@@ -106,9 +122,11 @@ Note: Not all server locations support port forwarding.
 
 ***Dedicated IP***
 
-If you have purchased a Dedicated IP from PIA. Add your DIP token to `piaDipToken` in the json file, then to enable the usage simply set `piaUseDip` to `true`. Remember PIA only give you the DIP token once, so make sure you have backed up the token somewhere.
+If you have purchased a Dedicated IP from PIA. Add your DIP token to `dipToken` in the json file for the instance, then to enable the usage simply set `dip` to `true`. Remember PIA only give you the DIP token once, so make sure you have backed up the token somewhere.
 
 I have developed this functionality by reserve engineering the PIA client, at this moment in time manual connections for DIP is not offically supported by PIA.
+
+Note: I have not tested DIP in a while, so if this works for you let me know, if not create a GitHub issue.
 
 ***Set outgoing tunnel gateway (outgoing interface)***
 
@@ -117,28 +135,6 @@ In some deployments, people may be running dual or even triple WAN configuration
 To accommodate this functionality, this is built in to the script. You will need to get the name of your wanted gateway, for example `WAN2_DHCP`, then set this as the `tunnelGateway` variable value in the json file (value needs to be in double quotes). When the script then runs it'll add/change a static route to enforce the PIA tunnel to use that gateway (interface).
 
 You'll find your gateway names in `System: Gateways: Single`, making sure its the IPv4 one.
-
-***WireGuard kernel module***
-
-*OPNsense 23.1 onwards kernel module is now the default.*
-
-Since OPNsense 21.1.4, they now support the install the new kernel module implementation of WireGuard, its early days for the module and should be considered experimental.
-
-The WireGuard kernel module is new implementation of WireGuard for FreeBSD, which runs in the kernel space instead of user space using the WireGuard-go implementation. Giving us better performance and bandwidth. Performance increase of 2.5x and more has been observed in certain workloads. I have managed to get 1.1gbit throughput on PIA's WireGuard servers using this kernel module on OPNsense.
-
-If you wish to test and tryout the kernel module, simply install the kmod and reboot OPNsense `pkg install wireguard-kmod`. Note the `wireguard-go` will show as stopped due to it no longer being used since you'll then be using the kernel module.
-
-```
-At this time this code is new, unvetted, possibly buggy, and should be
-considered `experimental`. It might contain security issues. We gladly
-welcome your testing and bug reports, but do keep in mind that this code
-is new, so some caution should be exercised at the moment for using it
-in mission critical environments.
-```
-
-Module is taken from https://www.freshports.org/net/wireguard-kmod/ which in turn is from https://git.zx2c4.com/wireguard-freebsd/.
-
-This kernel code is by Jason A. Donenfeld and others, not the version by Netgate.
 
 ---
 `WireGuard` is a registered trademarks of Jason A. Donenfeld.

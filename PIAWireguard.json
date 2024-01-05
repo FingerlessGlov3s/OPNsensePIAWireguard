@@ -2,13 +2,17 @@
     "opnsenseURL": "https://127.0.0.1",
     "opnsenseKey": "",
     "opnsenseSecret": "",
-    "opnsenseWGName": "PIA",
-    "opnsenseWGPort": "51815",
     "piaUsername": "",
     "piaPassword": "",
-    "piaRegionId": "uk",
-    "piaDipToken": "",
-    "piaPortForward": false,
-    "piaUseDip": false,
-    "tunnelGateway": null
+    "tunnelGateway": null,
+    "opnsenseWGPrefixName": "pia",
+    "instances": {
+        "instancename": {
+            "regionId": "",
+            "dipToken": "",
+            "dip": false,
+            "portForward": false,
+            "opnsenseWGPort": "51815"
+        }
+    }
 }

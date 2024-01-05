@@ -659,7 +659,8 @@ for instance_obj in instances_array:
 
     # We must check if the gateway IP given by PIA isn't already in use by another tunnel.
     if CheckIpInRoutes(wireguardServerInfo['server_vip'], f"wg{instance_obj.WGInstance}"):
-        logger.error(f"The IP {wireguardServerInfo['server_vip']} is an exact match for at least one route, can not configure this tunnel, will try again next time.")
+        logger.error(f"{instance_obj.Name} encountered a problem")
+        logger.error(f"The new gateway IP {wireguardServerInfo['server_vip']} is an exact match for at least one current route, can not configure this tunnel, will try again next time.")
         continue
 
     # Write wireguard connection information to file, for later use.

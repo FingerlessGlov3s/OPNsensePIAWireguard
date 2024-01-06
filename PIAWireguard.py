@@ -429,23 +429,13 @@ for instance_obj in instances_array:
         logger.debug(f"{instance_obj.GatewayFile()} tunnel gateway file missing")
         instance_obj.ServerChange = True
 
-serverChangeNeeded = False
-for instance_obj in instances_array:
-    if instance_obj.ServerChange == True:
-        serverChangeNeeded = True
-
-# Nothing to do
-if serverChangeNeeded == False:
-    logger.debug(f"No tunnels need attention")
-    sys.exit(0)
-
 # Populate PIA server list
-try:
-    serverList = PIAServerList()
-except ValueError as e:
-    logger.debug(f"Failed to get PIA Server List: {str(e)}")
-    sys.exit(1)
-
+if any(instance_obj.ServerChange for instance_obj in instances_array):
+    try:
+        serverList = PIAServerList()
+    except ValueError as e:
+        logger.debug(f"Failed to get PIA Server List: {str(e)}")
+        sys.exit(1)
 
 # Get PIA API Token if needed for DIP
 for instance_obj in instances_array:
@@ -775,28 +765,18 @@ for instance_obj in instances_array:
 #
 # Port forward section
 # Note the tunnel must be up for the port forward requests to work, as they go over the tunnel
-#
-    
-# We need to wait
-portForwarding = False
-for instance_obj in instances_array:
-    if instance_obj.PortForward == False:
-        continue
-    if instance_obj.ServerChange == False:
-        continue
-    portForwarding = True
-
-if portForwarding:
-    logger.debug("Wait 10 seconds for new WireGuard server to apply before applying port forwarding")
+#    
+# We need to wait if we had to changed server
+if any(instance.PortForward and instance.ServerChange for instance in instances_array):
+    logger.debug("Waiting 10 seconds for new WireGuard server(s) to apply before applying port forwarding")
     time.sleep(10)
 
+# check each instance for portforwarding
 for instance_obj in instances_array:
     if instance_obj.PortForward == False:
         continue
-    if instance_obj.ServerChange == False:
-        continue
 
-    logger.debug(f"Processing forward for tunnel instance {instance_obj.Name}")
+    logger.debug(f"Processing port forward for tunnel instance {instance_obj.Name}")
 
     # Declare some bits
     wireguardSignature = None

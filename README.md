@@ -105,7 +105,7 @@ Since 2024/01/05 the script has gone a complete overhaul, upgrade steps are
     1. Rename current WG peer to `pia-{instancename}-server` from `PIA-Server`
 1. If your using port forwarding rename the alias to `pia_{instancename}_port` from `PIA_Port` 
 1. Ensure you applied all changes
-1. Run the new script via SSH in debug mode and ensure it's working `python3 PIAWireguard.py --debug`, should return `No tunnels need attention` as the last log entry
+1. Run the new script via SSH in debug mode and ensure it's working `python3 PIAWireguard.py --debug`, should return `instancename tunnel up - last handshake x seconds ago` as the last log entry
 1. Then run again but this time forcing a it to change server `python3 PIAWireguard.py --debug --changeserver instancename`
 1. If all is working correctly, then re-able the cron entry
 1. Now double check all your configured routes and rules, ensure IP leaking isn't happening etc

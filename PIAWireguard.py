@@ -238,7 +238,8 @@ class State:
     wgIp = ''
 
 # Fixes bug in python requests where this env is preferred over Verify=False
-del os.environ['REQUESTS_CA_BUNDLE']
+if 'REQUESTS_CA_BUNDLE' in os.environ:
+    del os.environ['REQUESTS_CA_BUNDLE']
 
 # Configure the logging module
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO, stream=sys.stdout)

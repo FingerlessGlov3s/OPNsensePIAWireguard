@@ -101,7 +101,7 @@ Since 2024/01/05 the script has gone a complete overhaul, upgrade steps are
 1. Populate the new `PIAWireguard.json` based on your old config file and the information above
 1. Upload new `PIAWireguard.py` and `PIAWireguard.json` file to `/conf/`
 1. Upload new `actions_piawireguard.conf` file to `/usr/local/opnsense/service/conf/actions.d/`
-1. Run `service configd restart` to refresh new actions file
+1. Run `service configd restart` to refresh new actions file via SSH
 1. There's a few bits in the WireGuard section in OPNsense you need to rename
     1. Rename current WG instance name to `pia-{instancename}` from `PIA`
     1. Rename current WG peer to `pia-{instancename}-server` from `PIA-Server`

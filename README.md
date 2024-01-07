@@ -77,7 +77,7 @@ Warning: Advanced Users Recommended
      1. Click the plus button at the bottom right of the table
      2. Enter `*/5` in the minute box
      3. Enter `*` in the hours box
-     4. Select `PIA WireGuard` on the command dropdown
+     4. Select `PIA WireGuard Monitor Tunnels` on the command dropdown
      5. Give it a Description of your choice.
      6. Click Save
  1. Last thing we need to set up is maximum MSS for TCP packets, which is 40 bytes smaller than the MTU of WireGuard, by default Wireguard uses 1420 bytes MTU. So we need to set an MSS maximum of 1380. (Without this you may have issues loading websites or slow speeds).
@@ -97,7 +97,7 @@ Note: If your having speed issues, you may need to change PIA server region or l
 **Updating**
 
 Since 2024/01/05 the script has gone a complete overhaul, upgrade steps are
-1. Disable the cron entry.
+1. Delete the cron entry.
 1. Populate the new `PIAWireguard.json` based on your old config file and the information above
 1. Upload new `PIAWireguard.py` and `PIAWireguard.json` file to `/conf/`
 1. There's a few bits in the WireGuard section in OPNsense you need to rename
@@ -107,7 +107,7 @@ Since 2024/01/05 the script has gone a complete overhaul, upgrade steps are
 1. Ensure you applied all changes
 1. Run the new script via SSH in debug mode and ensure it's working `python3 PIAWireguard.py --debug`, should return `instancename tunnel up - last handshake x seconds ago` as the last log entry
 1. Then run again but this time forcing a it to change server `python3 PIAWireguard.py --debug --changeserver instancename`
-1. If all is working correctly, then re-able the cron entry
+1. If all is working correctly, then re-create the cron entry, see above for example as command name changed
 1. Now double check all your configured routes and rules, ensure IP leaking isn't happening etc
 
 See releases, starting from the version you have installed, to see if there's anything you need to do, usually it's just upgrade the py script itself.

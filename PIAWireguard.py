@@ -237,8 +237,11 @@ class State:
     wgCn = ''
     wgIp = ''
 
+# Fixes bug in python requests where this env is preferred over Verify=False
+del os.environ['REQUESTS_CA_BUNDLE']
+
 # Configure the logging module
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger("PIAWireGuard")
 
 # Create an argument parser
@@ -456,7 +459,7 @@ for instance_obj in instances_array:
             "Authorization": f"Token {piaToken}",
             "content-type": "application/json"
         }
-        dipSession = CreateRequestsSession(None, piaAuthHeaders)
+        dipSession = CreateRequestsSession(None, piaAuthHeaders, "/etc/ssl/cert.pem")
         break # Only need one set of details
 
 # Now we process each instance that needs the server changing
@@ -975,3 +978,6 @@ for instance_obj in instances_array:
                 sys.exit(1)
             
     logger.debug(f"Finished processing port forward for tunnel instance {instance_obj.Name}")
+
+logger.debug("Finished")
+sys.exit(0)

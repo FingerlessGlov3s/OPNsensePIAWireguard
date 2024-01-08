@@ -264,8 +264,8 @@ try:
     else:
         logger.error(f"Failed to find config file {configFile}")
         sys.exit(1)
-except:
-    logger.error(f"Failed to import config file {configFile}")
+except ValueError as e:
+    logger.error(f"Failed to import config file {configFile} error: {str(e)}")
     sys.exit(1)
 
 # Validate our config

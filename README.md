@@ -135,7 +135,7 @@ optional arguments:
 `--listregions` lists all of the available PIA regions \
 `--changeserver [instancename]` allows you to rotate/change the server your connected to for that instance. \
 
-Example: `/conf/PIAWireguard.py --debug --changeserver instance2` will change the server that instance2 is connecting too.
+Example: `/conf/PIAWireguard.py --debug --changeserver instance2` will change the server that instance2 is connecting too and print all debug messages.
 
 ***Port Forwarding***
 

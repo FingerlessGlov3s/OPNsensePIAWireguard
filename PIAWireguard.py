@@ -60,6 +60,7 @@ def validate_json(data):
     if not isinstance(instances, dict) or not 1 <= len(instances) <= 10:
         raise ValueError("Invalid 'instances' structure")
 
+    opnsenseWGPorts = set()
     for instance_name, instance_data in instances.items():
         if not instance_name.isalnum or not isinstance(instance_data, dict):
             raise ValueError(f"Invalid instance name or structure for '{instance_name}'")
@@ -83,6 +84,19 @@ def validate_json(data):
         opnsenseWGPort = instance_data.get("opnsenseWGPort", "")
         if not (opnsenseWGPort.isdigit() and 1 <= int(opnsenseWGPort) <= 65535):
             raise ValueError(f"'opnsenseWGPort' in instance '{instance_name}' must be a number between 1 and 65535")
+        if opnsenseWGPort in opnsenseWGPorts:
+            raise ValueError(f"Duplicate opnsenseWGPort found: '{opnsenseWGPort}' in instance '{instance_name}'")
+        opnsenseWGPorts.add(opnsenseWGPort)
+
+# checks for duplicate keys
+def CheckForDupKey(ordered_pairs):
+    d = {}
+    for k, v in ordered_pairs:
+        if k in d:
+           raise ValueError("duplicate key: %r" % (k,))
+        else:
+           d[k] = v
+    return d
 
 def CreateRequestsSession(auth, headers, verify = True):
     session = requests.Session()
@@ -260,7 +274,7 @@ if args.debug:
 try:
     configFile = os.path.join(sys.path[0], "PIAWireguard.json")
     if os.path.isfile(configFile):
-        config = json.loads(open(configFile, 'r').read())
+        config = json.loads(open(configFile, 'r').read(), object_pairs_hook=CheckForDupKey)
     else:
         logger.error(f"Failed to find config file {configFile}")
         sys.exit(1)
@@ -402,7 +416,7 @@ for instance_name in config.get('instances', {}):
         wireguardPeerInstanceInfo = json.loads(request.text)['client']
         instance_obj.WGPeerPubkey = wireguardPeerInstanceInfo['pubkey']
     
-    logger.debug(f"Finished setting up {instance_name} tunnel instance in OPNsense")
+    logger.debug(f"Finished getting {instance_name} tunnel instance information from OPNsense")
 
     instances_array.append(instance_obj)
 
@@ -676,10 +690,11 @@ for instance_obj in instances_array:
     # Update payload and remove unneeded bits
     wireguardInstanceInfo = json.loads(request.text)
     wireguardInstanceInfo['server']['enabled'] = '1'
-    wireguardInstanceInfo['server']['peers'] = instance_obj.WGPeerUUID
-    wireguardInstanceInfo['server']['tunneladdress'] = wireguardServerInfo['peer_ip'] + '/32' # need to add /32 so it does not expand to /8
-    wireguardInstanceInfo['server']['gateway'] = wireguardServerInfo['server_vip']
     wireguardInstanceInfo['server']['dns'] = ''
+    wireguardInstanceInfo['server']['gateway'] = wireguardServerInfo['server_vip']
+    wireguardInstanceInfo['server']['peers'] = instance_obj.WGPeerUUID
+    wireguardInstanceInfo['server']['port'] = instance_obj.WGPort
+    wireguardInstanceInfo['server']['tunneladdress'] = wireguardServerInfo['peer_ip'] + '/32' # need to add /32 so it does not expand to /8
     del wireguardInstanceInfo['server']['instance'] # remove this as its not required in the request
     if 'carp_depend_on' in wireguardInstanceInfo['server'].keys(): 
         del wireguardInstanceInfo['server']['carp_depend_on']

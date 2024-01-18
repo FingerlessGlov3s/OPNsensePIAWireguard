@@ -114,6 +114,29 @@ Since 2024/01/05 the script has gone a complete overhaul, upgrade steps are
 
 See releases, starting from the version you have installed, to see if there's anything you need to do, usually it's just upgrade the py script itself.
 
+**Arguments**
+
+You may list the arguments you can pass in to the script by doing the following "/conf/PIAWireguard.py --help` an example output is below.
+```
+usage: PIAWireguard.py [-h] [--debug] [--listregions] [--changeserver [instancename]]
+
+Python script to automate connections to PIA's WireGuard Servers. Source:
+https://github.com/FingerlessGlov3s/OPNsensePIAWireguard
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --debug               Enable debug logging
+  --listregions         List available regions and their properties
+  --changeserver [instancename]
+                        Change server for instance name or "all" for all instances
+```
+
+`--debug` shows debug logging, to see what the script is doing or maybe not doing \
+`--listregions` lists all of the available PIA regions \
+`--changeserver [instancename]` allows you to rotate/change the server your connected to for that instance. \
+
+Example: `/conf/PIAWireguard.py --debug --changeserver instance2` will change the server that instance2 is connecting too.
+
 ***Port Forwarding***
 
 To use port forwarding Enable `portForward` variable in the json file for the intance from `false` to `true`. This will create an alias in your system called `pia_instancename_port`, which you can then use in your Port Forwarding rule. This alias will self update when required.

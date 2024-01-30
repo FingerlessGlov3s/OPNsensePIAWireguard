@@ -674,6 +674,7 @@ for instance_obj in instances_array:
     # Write wireguard connection information to file, for later use.
     # we need to add server name as well
     wireguardServerInfo['server_name'] = state.wgCn
+    wireguardServerInfo['servermeta_name'] = state.metaCn
     wireguardServerInfo['servermeta_ip'] = state.metaIp
     with open(instance_obj.InfoFile(), 'w') as filetowrite:
         filetowrite.write(json.dumps(wireguardServerInfo))
@@ -845,10 +846,10 @@ for instance_obj in instances_array:
         # Port refresh required to scheduled the Wireguard server adding the port.
         portRefresh = True
         # get a new piatoken if we are renewing the port
-        override_dns(wireguardServerInfo['server_name'], wireguardServerInfo['servermeta_ip'])
+        override_dns(wireguardServerInfo['servermeta_name'], wireguardServerInfo['servermeta_ip'])
         piaMetaSession = CreateRequestsSession((config['piaUsername'], config['piaPassword']), None, state.ca)
         try:
-            request = GetRequest(piaMetaSession, f"https://{wireguardServerInfo['server_name']}/authv3/generateToken")
+            request = GetRequest(piaMetaSession, f"https://{wireguardServerInfo['servermeta_name']}/authv3/generateToken")
         except ValueError as e:
             logger.error(f"Meta generateToken - Error message: {str(e)}")
             sys.exit(1)

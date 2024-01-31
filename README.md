@@ -16,6 +16,8 @@ Warning: Advanced Users Recommended
  3. Enable Secure Shell, Permit root user login and Permit password login (System: Settings: Administration -> Secure Shell) this can be reverted once the tunnel is working.
  4. HTTPS WebUI enabled (System: Settings: Administration -> Protocol: HTTPS)
 
+*If script already installed jump to Updating section*
+
 **Setup**
  1. Create new user called something on the lines of `WireguardAPI`,
      1. Go to  System: Access: Users
@@ -96,9 +98,11 @@ Note: If your having speed issues, you may need to change PIA server region or l
 
 **Updating**
 
+`{instancename}` replace with the name for your instance in the config file, example `london` would be come `pia-london` for the WireGuard instance name. See *Example config* below. Then proceed to the below instructions.
+
 Since 2024/01/05 the script has gone a complete overhaul, upgrade steps are
-1. Delete the cron entry.
-1. Populate the new `PIAWireguard.json` based on your old config file and the information above
+1. Delete the current cron entry.
+1. Populate the new `PIAWireguard.json` based on your old config file
 1. Upload new `PIAWireguard.py` and `PIAWireguard.json` file to `/conf/`
 1. Upload new `actions_piawireguard.conf` file to `/usr/local/opnsense/service/conf/actions.d/`
 1. Run `service configd restart` to refresh new actions file via SSH
@@ -108,11 +112,37 @@ Since 2024/01/05 the script has gone a complete overhaul, upgrade steps are
 1. If your using port forwarding rename the alias to `pia_{instancename}_port` from `PIA_Port` 
 1. Ensure you applied all changes
 1. Run the new script via SSH in debug mode and ensure it's working `python3 PIAWireguard.py --debug`, should return `instancename tunnel up - last handshake x seconds ago` as the last log entry
-1. Then run again but this time forcing a it to change server `python3 PIAWireguard.py --debug --changeserver instancename`
-1. If all is working correctly, then re-create the cron entry, see above for example as command name changed
+1. Then run again but this time forcing a it to change server `python3 PIAWireguard.py --debug --changeserver instancename`, to ensure all changes will apply and work.
+1. If all is working correctly, then re-create the cron entry, see above for example as command name changed to `PIA WireGuard Monitor Tunnels`
 1. Now double check all your configured routes and rules, ensure IP leaking isn't happening etc
 
-See releases, starting from the version you have installed, to see if there's anything you need to do, usually it's just upgrade the py script itself.
+See releases, starting from the version you have installed, to see if there's anything you need to do, usually it's just upgrade the py script itself. Release description will have the required commands, and notes for upgrading.
+
+**Example Config**
+
+Example config
+```json
+{
+    "opnsenseURL": "https://127.0.0.1:443",
+    "opnsenseKey": "/FQDXExojUWWuBdnPEPCUt98vnrQOdLxFqypTIEhE41304uYgA68ZJw7fveXBpXkMHqiAdx04cRAlLwh",
+    "opnsenseSecret": "p+Gi4uE1xypuGIptbhrDylGKcNd9vaRpQ298eH0k6SFRQ6Crw4fLk0cIA0eSuKvWEN0hKx8JaIGUtNPq",
+    "piaUsername": "p1234567",
+    "piaPassword": "EncryptAllTheThings",
+    "tunnelGateway": null,
+    "opnsenseWGPrefixName": "pia",
+    "instances": {
+        "london": {
+            "regionId": "uk",
+            "dipToken": "",
+            "dip": false,
+            "portForward": true,
+            "opnsenseWGPort": "51815"
+        }
+    }
+}
+```
+
+*Passwords and keys in the example are not real*
 
 **Arguments**
 

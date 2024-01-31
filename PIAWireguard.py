@@ -294,7 +294,7 @@ state = State
 
 # Check if user wanted to list regions, and if so display them
 if args.listregions:
-    r = requests.get(state.serverList)
+    r = requests.get(state.serverList, timeout=15)
     if r.status_code != 200:
         logger.error("Failed to get PIA server list, url is returning non 200 HTTP code, is there a connectivity issue?")
         sys.exit(2)
@@ -443,8 +443,8 @@ for instance_obj in instances_array:
             else:
                 logger.debug(f"{instance_obj.Name} tunnel up - last handshake {str(secondsDifferent)} seconds ago")
                 instance_obj.ServerChange = False
-    if os.path.isfile(instance_obj.GatewayFile()) is False:
-        logger.debug(f"{instance_obj.GatewayFile()} tunnel gateway file missing")
+    if instance_obj.ServerChange is False and os.path.isfile(instance_obj.GatewayFile()) is False:
+        logger.debug(f"{instance_obj.Name} tunnel gateway file missing, change server requested")
         instance_obj.ServerChange = True
 
 # Populate PIA server list
@@ -807,9 +807,15 @@ for instance_obj in instances_array:
 
     getSignatureRequestsSession = CreateRequestsSession(None, None, state.ca)
 
+    # If server change force new port
+    if instance_obj.ServerChange:
+        newPortRequired = True
+
     # first we need to check if we have a port forward signature.
     if os.path.isfile(instance_obj.PortSignatureFile()):
         wireguardSignature = json.loads(open(instance_obj.PortSignatureFile(), 'r').read())
+    else:
+        newPortRequired = True
     
     # get wireguard Server information
     if os.path.isfile(instance_obj.InfoFile()):
@@ -824,7 +830,7 @@ for instance_obj in instances_array:
         logger.debug("Port not allocated, shall request port")
 
     # We'll check the expiry of the port, and if its expired
-    if wireguardSignature is not None:
+    if wireguardSignature is not None and newPortRequired is False:
         expiryDate = wireguardSignature['expires_at']
         if '.' in expiryDate:
             expiryDate = expiryDate.split('.')[0].replace("T", " ").replace("Z", "")
@@ -842,7 +848,7 @@ for instance_obj in instances_array:
     
     # first of we need to get a signature, signature lasts two months, we so only need to get it on serverChange. Server policy for reboots is every 2-3 months anyway
     # Might be a good idea to set cron to change PIA server every 2 month anyway
-    if instance_obj.ServerChange or newPortRequired:
+    if newPortRequired:
         # Port refresh required to scheduled the Wireguard server adding the port.
         portRefresh = True
         # get a new piatoken if we are renewing the port
@@ -913,7 +919,7 @@ for instance_obj in instances_array:
             logger.debug(f"Saved wireguardSignature and payload to {instance_obj.PortSignatureFile()}")
 
     # If new port then we update the alias
-    if instance_obj.ServerChange or newPortRequired:
+    if newPortRequired:
         # check if the PIA port forward alias exists
         opnsensePiaPortUpdated = False
         opnsensePiaPortUUID = ''

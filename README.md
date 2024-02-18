@@ -64,7 +64,7 @@ Warning: Advanced Users Recommended
      4. A new `WAN_PIAWG_INSTANCENAME` interface will show on the list, which will be the new wg interface, click on it to edit.
      5. Tick `Enable Interface`, click save and Apply Changes. nothing else
  1. Go to System: Gateways: Single, so we can set up the PIA gateway for the tunnel/tunnels
-     1. Top right Click Add
+     1. At the bottom right click the `+` button to add a new gateway
      2. Make sure Disabled is unchecked
      3. Enter the name `WAN_PIA_INSTANCENAME_IPv4`
      4. Interface select `WAN_PIAWG_INSTANCENAME`

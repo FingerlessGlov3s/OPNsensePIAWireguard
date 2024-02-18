@@ -32,6 +32,7 @@ import subprocess
 import sys
 import time
 import urllib3
+import secrets
 
 #
 # Please see PIAWireguard.json for configuration settings
@@ -178,6 +179,11 @@ def InformNewIP(interfaceName):
         return True            
     except subprocess.CalledProcessError as e:
         raise ValueError(f"Error executing command: {e}")
+
+def GenerateFakeWGKey():
+    key = secrets.token_bytes(32)
+    public_key = base64.b64encode(key).decode('utf-8')
+    return public_key
 
 
 # Function for DNS override taken from https://stackoverflow.com/a/60751327/3927406
@@ -366,8 +372,12 @@ for instance_name in config.get('instances', {}):
         except ValueError as e:
             logger.error(f"Add Instance (server) - Error message: {str(e)}")
             sys.exit(1)
-        instance_obj.WGUUID = json.loads(request.text)["uuid"]
-    
+        addServer = json.loads(request.text)
+        if addServer['result'] != 'saved':
+            logger.error(f"WireGuard creating Instance (server) - failed to add {json.dumps(addServer)}")
+            sys.exit(1)
+        instance_obj.WGUUID = addServer['uuid']
+
     logger.debug(f"Getting WireGuard instance for {instance_obj.Name}")
     try:
         request = GetRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/wireguard/server/getServer/{instance_obj.WGUUID}")
@@ -388,7 +398,7 @@ for instance_name in config.get('instances', {}):
             "client": {
                 "enabled": '1',
                 "name": instance_obj.WGPeerName,
-                "pubkey": "WhCLp1jt2QfcCRYHP63++tGwdSvCA4B3oeOzJu5dMCM=", # placeholder key
+                "pubkey": GenerateFakeWGKey(), # placeholder key
                 "tunneladdress": "0.0.0.0/0",
                 "keepalive ": '25',
                 "servers": instance_obj.WGUUID
@@ -401,7 +411,7 @@ for instance_name in config.get('instances', {}):
             sys.exit(1)
         addClient = json.loads(request.text)
         if addClient['result'] != 'saved':
-            logger.error(f"WireGuard creating peer - Error message: {str(e)}")
+            logger.error(f"WireGuard creating peer - failed to add {json.dumps(addClient)}")
             sys.exit(1)
         instance_obj.WGPeerUUID = addClient['uuid']
     else:

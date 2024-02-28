@@ -1,5 +1,5 @@
 {
-    "opnsenseURL": "https://127.0.0.1",
+    "opnsenseURL": "https://127.0.0.1:443",
     "opnsenseKey": "",
     "opnsenseSecret": "",
     "piaUsername": "",

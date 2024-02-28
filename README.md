@@ -6,7 +6,7 @@ It will create a Wireguard Instance and a Peer on your OPNsense deployment autom
 
 You can also create a CRON job, allowing you to manually change the PIA server you are connected to.
 
-**Warning: Advanced Users Recommended**
+**Warning: This is for Advanced Users**
 
 **Prerequisites**
 ===
@@ -44,10 +44,11 @@ You can also create a CRON job, allowing you to manually change the PIA server y
      - `fetch -o /conf https://raw.githubusercontent.com/FingerlessGlov3s/OPNsensePIAWireguard/main/PIAWireguard.py`
      - `fetch -o /conf https://raw.githubusercontent.com/FingerlessGlov3s/OPNsensePIAWireguard/main/ca.rsa.4096.crt`
      - `fetch -o /usr/local/opnsense/service/conf/actions.d https://raw.githubusercontent.com/FingerlessGlov3s/OPNsensePIAWireguard/main/actions_piawireguard.conf`
- 1. Download the latest Release from GitHub to your computer
+ 1. Download the latest Release from GitHub to your computer, to ensure it's a stable release
     1. https://github.com/FingerlessGlov3s/OPNsensePIAWireguard/releases
  1. Edit the `PIAWireguard.json` file using Notepad++ or your favourite IDE.
     1. The following variables need to be filled in:
+        - `opnsenseURL` Should only need to change this if you use a different `TCP Port` for the WebUI or changed the `Listen Interfaces`, the provided URL is correct if you've left those unchanged.
         - `opnsenseKey` WireguardAPI key you downloaded from step 2.2 `apikeys.txt`
         - `opnsenseSecret` WireguardAPI secret you downloaded from step 2.2  `apikeys.txt`
         - `piaUsername` Your PIA username
@@ -70,29 +71,29 @@ You can also create a CRON job, allowing you to manually change the PIA server y
      - Execute the script, in debug mode with output:  `/conf/PIAWireguard.py --debug`
  1. Go to Interfaces: Assignments in OPNsense, so we can assign the new interface for the tunnel/tunnels
      1. At the bottom of the interfaces you'll see `New interface`, on the drop down select `wg0`, unless you already had one set up then select `wg1` etc...
-     2. Give it a description like `WAN_PIAWG`
-     3. Once selected click the `+` button
-     4. A new `WAN_PIAWG_INSTANCENAME` interface will show on the list, which will be the new wg interface, click on it to edit.
-     5. Tick `Enable Interface`, click save and Apply Changes. nothing else
+     1. Give it a description like `WAN_PIAWG`
+     1. Once selected click the `+` button
+     1. A new `WAN_PIAWG_INSTANCENAME` interface will show on the list, which will be the new wg interface, click on it to edit.
+     1. Tick `Enable Interface`, click save and Apply Changes. nothing else
  1. Go to `System: Gateways: Single`, so we can set up the PIA gateway for the tunnel/tunnels
      1. At the bottom right click the `+` button to add a new gateway
-     2. Make sure `Disabled` is unchecked
-     3. Enter the name `WAN_PIA_INSTANCENAME_IPv4`
-     4. Interface select `WAN_PIAWG_INSTANCENAME`
-     5. Tick `Far Gateway`
-     6. Untick `Disable Gateway Monitoring`
-     7. Click `Save and Apply Changes`
+     1. Make sure `Disabled` is unchecked
+     1. Enter the name `WAN_PIA_INSTANCENAME_IPv4`
+     1. Interface select `WAN_PIAWG_INSTANCENAME`
+     1. Tick `Far Gateway`
+     1. Untick `Disable Gateway Monitoring`
+     1. Click `Save and Apply Changes`
  1. Also reccomended you set your Main gateway to have a lower Priority number than the created ones for the PIA tunnel
  1. Go back to the SSH terminal, run the following command
      - `/conf/PIAWireguard.py --debug --changeserver instancename`
  1. Now OPNsense should be setup to use the PIA VPN tunnel as an internet gateway.  If you go back in to `System: Gateways: Single`, you should see `WAN_PIA_INSTANCENAME_IPv4` now has a gateway IP and is pinging
  1. Now we need to set up a cron job to make sure the tunnel says up, and changes server when necessary. Go to System: Settings: Cron
      1. Click the `plus` button at the bottom right of the table
-     2. Enter `*/5` in the minute box
-     3. Enter `*` in the hours box
-     4. Select `PIA WireGuard Monitor Tunnels` on the command dropdown
-     5. Give it a Description of your choice.
-     6. Click Save
+     1. Enter `*/5` in the minute box
+     1. Enter `*` in the hours box
+     1. Select `PIA WireGuard Monitor Tunnels` on the command dropdown
+     1. Give it a Description of your choice.
+     1. Click Save
  1. Last thing we need to set up is maximum MSS for TCP packets, which is 40 bytes smaller than the MTU of WireGuard.  By default Wireguard uses 1420 bytes MTU. So we need to set an MSS maximum of 1380. (Without this you may have issues loading websites or slow speeds).
     1. Goto `Firewall: Settings: Normalization`
     1. Click `Add`
@@ -137,7 +138,7 @@ See releases, starting from the version you have installed, to see if there's an
 Example config
 ```json
 {
-    "opnsenseURL": "https://192.168.1.1:443",
+    "opnsenseURL": "https://127.0.0.1:443",
     "opnsenseKey": "/FQDXExojUWWuBdnPEPCUt98vnrQOdLxFqypTIEhE41304uYgA68ZJw7fveXBpXkMHqiAdx04cRAlLwh",
     "opnsenseSecret": "p+Gi4uE1xypuGIptbhrDylGKcNd9vaRpQ298eH0k6SFRQ6Crw4fLk0cIA0eSuKvWEN0hKx8JaIGUtNPq",
     "piaUsername": "p1234567",
@@ -209,7 +210,7 @@ You'll find your gateway names in `System: Gateways: Single`, making sure its th
 ===
 You will find that if the VPN tunnel isn't up, that traffic that should flow over it, will instead head straight out your WAN interface.  You can setup a "VPN Kill Switch" to prevent this.
 
-1. `Firewall - Rules - Floating`
+1. `Firewall - Rules - WAN`
 1. Create a new rule
     1. `Action - Block`
     1. `Quick - Apply the action immediately on match`
@@ -218,6 +219,7 @@ You will find that if the VPN tunnel isn't up, that traffic that should flow ove
     1. `Description - "Don't let traffic headed for VPN out the WAN"`
     1. `Match local tag = NO_WAN_EGRESS`
     1. Save this rule
+    1. Repeat for other WAN interfaces, if you have a dual WAN setup, for most people this is not needed.
 1. `Firewall - Rules - LAN` (Or whatever interface has VPN rules)
     1. Edit the rule where the gateway is the VPN tunnel
     1. Click `Advanced features Show/Hide`

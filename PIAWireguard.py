@@ -38,17 +38,6 @@ import secrets
 # Please see PIAWireguard.json for configuration settings
 #
 
-# Determine the correct CA bundle path
-if os.path.isfile("/etc/ssl/cert.pem"):
-    ca_bundle = "/etc/ssl/cert.pem"  # Path for older systems
-elif os.path.isfile("/usr/local/share/certs/ca-root-nss.crt"):
-    ca_bundle = "/usr/local/share/certs/ca-root-nss.crt"  # Path for updated systems
-else:
-    raise FileNotFoundError(
-        "No valid CA certificate bundle found. Please ensure your system has a CA bundle at either "
-        "/etc/ssl/cert.pem or /usr/local/share/certs/ca-root-nss.crt"
-    )
-
 #
 # Script Start
 #
@@ -494,7 +483,7 @@ for instance_obj in instances_array:
             "Authorization": f"Token {piaToken}",
             "content-type": "application/json"
         }
-        dipSession = CreateRequestsSession(None, piaAuthHeaders, ca_bundle)
+        dipSession = CreateRequestsSession(None, piaAuthHeaders, "/usr/local/share/certs/ca-root-nss.crt")
         break # Only need one set of details
 
 # Now we process each instance that needs the server changing

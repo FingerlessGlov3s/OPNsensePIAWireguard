@@ -38,7 +38,6 @@ import secrets
 # Please see PIAWireguard.json for configuration settings
 #
 
-
 #
 # Script Start
 #
@@ -484,7 +483,7 @@ for instance_obj in instances_array:
             "Authorization": f"Token {piaToken}",
             "content-type": "application/json"
         }
-        dipSession = CreateRequestsSession(None, piaAuthHeaders, "/etc/ssl/cert.pem")
+        dipSession = CreateRequestsSession(None, piaAuthHeaders, "/usr/local/share/certs/ca-root-nss.crt")
         break # Only need one set of details
 
 # Now we process each instance that needs the server changing

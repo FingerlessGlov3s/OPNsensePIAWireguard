@@ -59,7 +59,7 @@ You can also create a CRON job, allowing you to manually change the PIA server y
         - `opnsenseWGPort` outgoing port for OPNsense, this needs to be different for each tunnel and not already be in use for something else on OPNsense
     1. Region ID info
         - You can get your PIA region id by running `ListRegions.py` on your local device. 
-        - If you don't have Python installed on your local device you can use this [Online Python Tool](https://paiza.io/en/projects/new?language=python3) 
+        - If you don't have Python installed on your local device you can use this [Online Python Tool](https://trinket.io/embed/python3/5bfe65475964) 
             - Copy the contents of the file and then click `Run`. This will list the name and region id of each PIA region, for you choose from.
         - It is also possible to get PIA region ids running the main script using the argument `--listregions`
  1. Copy the `PIAWireguard.json` file to `/conf/` on your OPNsense router using SCP or Filezilla etc, make sure you using the root user of OPNsense when you connect, otherwise you'll get access denied messages.

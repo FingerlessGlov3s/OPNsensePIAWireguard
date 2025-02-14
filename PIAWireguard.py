@@ -982,6 +982,8 @@ for instance_obj in instances_array:
                 piaPortAlias['alias']['interface'] = ''
                 if 'categories' in piaPortAlias['alias'].keys(): 
                     del piaPortAlias['alias']['categories']
+                if 'authtype' in piaPortAlias['alias'].keys(): 
+                    del piaPortAlias['alias']['authtype']
                 try:
                     request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/firewall/alias/setItem/{opnsensePiaPortUUID}", piaPortAlias)
                 except ValueError as e:
@@ -989,7 +991,7 @@ for instance_obj in instances_array:
                     sys.exit(1)
                 setItem = json.loads(request.text)
                 if setItem['result'] != 'saved':
-                    logger.error(f"setItem alias - Error message: {str(e)}")
+                    logger.error(f"setItem alias - Response error message: {str(request.text)}")
                     sys.exit(1)
                 opnsensePiaPortUpdated = True
             else:

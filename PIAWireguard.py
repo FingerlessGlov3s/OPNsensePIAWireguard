@@ -980,10 +980,9 @@ for instance_obj in instances_array:
                 piaPortAlias['alias']['counters'] = ''
                 piaPortAlias['alias']['proto'] = ''
                 piaPortAlias['alias']['interface'] = ''
-                if 'categories' in piaPortAlias['alias'].keys(): 
-                    del piaPortAlias['alias']['categories']
-                if 'authtype' in piaPortAlias['alias'].keys(): 
-                    del piaPortAlias['alias']['authtype']
+                keys_to_delete = ['categories', 'authtype']
+                for key in keys_to_delete:
+                    piaPortAlias['alias'].pop(key, None)
                 try:
                     request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/firewall/alias/setItem/{opnsensePiaPortUUID}", piaPortAlias)
                 except ValueError as e:

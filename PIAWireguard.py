@@ -261,7 +261,7 @@ if 'REQUESTS_CA_BUNDLE' in os.environ:
     del os.environ['REQUESTS_CA_BUNDLE']
 
 # Configure the logging module
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO, stream=sys.stdout)
+logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger("PIAWireGuard")
 
 # Create an argument parser

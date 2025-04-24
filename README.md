@@ -226,6 +226,43 @@ You will find that if the VPN tunnel isn't up, that traffic that should flow ove
     1. Under `Set local tag` add in `NO_WAN_EGRESS`
     1. Save this rule
 
+***Post configuration script***
+===
+If you wish to run a custom script after a connection has been established to a new server or when the port forwarding port has changed, you can configure it to run any executable of your choice to perform additional actions.
+
+For example, you could:
+- Trigger a webhook to notify your monitoring system
+- Update the peer port on your P2P client
+- Restart or reload a service
+
+To use this feature, add a `postConfigScript` key to your instance configuration in the `PIAWireguard.json` file. The value should be the full path to your custom script.
+
+The script will be executed with:
+- First argument is the instance name
+- second argument forwarded port (only if port forwarding is enabled)
+
+```
+...
+"london": {
+    "regionId": "uk",
+    "dipToken": "",
+    "dip": false,
+    "portForward": true,
+    "opnsenseWGPort": "51815"
+    "postConfigScript": "/conf/MyCustomScript.sh"
+}
+...
+```
+
+Example contents of your script to send the instance name and port as a webhook. Don't forget to set your script executable `chmod +x file`
+```
+#!/bin/sh
+# This script sends the instance name and port to a webhook
+curl -s -X POST https://webhook-test.com/af9ba6b577068f3284e31efd7dd64714 \
+  -H "Content-Type: application/json" \
+  -d "{\"instance\":\"$1\",\"port\":\"$2\"}"
+```
+
 ---
 `WireGuard` is a registered trademarks of Jason A. Donenfeld.
 

@@ -248,7 +248,7 @@ The script will be executed with:
     "dipToken": "",
     "dip": false,
     "portForward": true,
-    "opnsenseWGPort": "51815"
+    "opnsenseWGPort": "51815",
     "postConfigScript": "/conf/MyCustomScript.sh"
 }
 ...

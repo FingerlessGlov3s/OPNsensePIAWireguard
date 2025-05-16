@@ -43,6 +43,7 @@ import secrets
 #
 
 def validate_json(data):
+    name_pattern = re.compile(r'^[a-zA-Z0-9_]+$')
     required_keys = ["opnsenseURL", "opnsenseKey", "opnsenseSecret", "piaUsername", "piaPassword", "opnsenseWGPrefixName", "instances"]
     for key in required_keys:
         if key not in data:
@@ -55,6 +56,9 @@ def validate_json(data):
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"Property '{prop}' must be a non-blank string")
 
+    if not name_pattern.match(data['opnsenseWGPrefixName']):
+        raise ValueError(f"Invalid opnsenseWGPrefixName value '{data['opnsenseWGPrefixName']}'")
+
     # Validate 'instances'
     instances = data.get("instances", {})
     if not isinstance(instances, dict) or not 1 <= len(instances) <= 10:
@@ -62,8 +66,11 @@ def validate_json(data):
 
     opnsenseWGPorts = set()
     for instance_name, instance_data in instances.items():
-        if not instance_name.isalnum or not isinstance(instance_data, dict):
-            raise ValueError(f"Invalid instance name or structure for '{instance_name}'")
+        if not name_pattern.match(instance_name):
+            raise ValueError(f"Invalid instance name '{instance_name}'")
+
+        if not isinstance(instance_data, dict):
+            raise ValueError(f"Invalid instance structure for '{instance_name}'")
 
         # Additional checks for instance properties
         required_instance_properties = ["regionId", "dipToken", "dip", "portForward", "opnsenseWGPort"]

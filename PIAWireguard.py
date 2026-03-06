@@ -33,6 +33,8 @@ import sys
 import time
 import urllib3
 import secrets
+import ssl
+from requests.adapters import HTTPAdapter
 
 #
 # Please see PIAWireguard.json for configuration settings
@@ -108,8 +110,26 @@ def CheckForDupKey(ordered_pairs):
            d[k] = v
     return d
 
+def create_custom_ssl_context(verify=True):
+    custom_context = ssl.create_default_context()
+    custom_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    if not verify:
+        custom_context.check_hostname = False  # Must be disabled BEFORE changing verify_mode
+        custom_context.verify_mode = ssl.CERT_NONE
+    return custom_context
+
+class CustomSSLAdapter(HTTPAdapter):
+    def __init__(self, ssl_context=None, **kwargs):
+        self.ssl_context = ssl_context
+        super().__init__(**kwargs)
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs['ssl_context'] = self.ssl_context
+        return super().init_poolmanager(*args, **kwargs)
+    
 def CreateRequestsSession(auth, headers, verify = True):
     session = requests.Session()
+    ssl_context = create_custom_ssl_context(verify)
+    session.mount('https://', CustomSSLAdapter(ssl_context=ssl_context))
     session.auth = auth
     session.headers.update({'User-Agent': 'Github: FingerlessGlov3s/OPNsensePIAWireguard'})
     if headers is not None:

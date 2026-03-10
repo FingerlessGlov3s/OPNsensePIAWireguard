@@ -45,7 +45,7 @@ from requests.adapters import HTTPAdapter
 #
 
 def validate_json(data):
-    name_pattern = re.compile(r'^[a-zA-Z0-9_]+$')
+    name_pattern = re.compile(r'^[a-zA-Z0-9_-]+$')
     required_keys = ["opnsenseURL", "opnsenseKey", "opnsenseSecret", "piaUsername", "piaPassword", "opnsenseWGPrefixName", "instances"]
     for key in required_keys:
         if key not in data:

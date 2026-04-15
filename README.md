@@ -26,19 +26,17 @@ You can also create a CRON job, allowing you to manually change the PIA server y
 *If an older version of the script is already installed, jump to the Updating section*
  1. Create a new user called something on the lines of "WireguardAPI"
      1. Go to `System: Access: Users`
-     1. Click the `Plus` (Add) on the top right
+     1. Click the  `Plus` (Add) button on the bottom right of the users table
      1. Username: `WireguardAPI`
      1. Password:  leave empty
      1. Tick `Generate a scrambled password to prevent local database logins for this user.`
-     1. Scroll to the bottom and click `Save`
- 1. Now that the user is created we can give it permissions and generate an API key pair
-     1. Scroll down to you see `Effective Privileges`, you want to give it the following permissions:
+     1. Scroll down to you see `Privileges`, you want to give it the following permissions:
          - `Firewall: Alias: Edit`
          - `Firewall: Aliases`
          - `System: Static Routes`
          - `VPN: Wireguard`
-     1. Click the `Plus` sign on `API Keys`, it'll download the keys in a txt file. We'll leverage this later.
      1. Click `Save`
+     1. The new user `WireguardAPI` will now appear on the users list, on the command section of the table for that user, click `Create and download API key for this user` button which looks like a ticket. We'll leverage this later.
  1. SSH to OPNsense and drop in to a terminal via `option 8`.
  1. As `root`, run the below commands:
      - `fetch -o /conf https://raw.githubusercontent.com/FingerlessGlov3s/OPNsensePIAWireguard/main/PIAWireguard.py`

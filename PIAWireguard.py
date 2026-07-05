@@ -63,7 +63,7 @@ def validate_json(data):
 
     # Validate 'instances'
     instances = data.get("instances", {})
-    if not isinstance(instances, dict) or not 1 <= len(instances) <= 10:
+    if not isinstance(instances, dict) or not 1 <= len(instances) <= 11:
         raise ValueError("Invalid 'instances' structure")
 
     opnsenseWGPorts = set()
@@ -99,6 +99,13 @@ def validate_json(data):
         if opnsenseWGPort in opnsenseWGPorts:
             raise ValueError(f"Duplicate opnsenseWGPort found: '{opnsenseWGPort}' in instance '{instance_name}'")
         opnsenseWGPorts.add(opnsenseWGPort)
+        
+        if "tunnelGateway" in instance_data:
+            if instance_data["tunnelGateway"] is not None and \
+               not isinstance(instance_data["tunnelGateway"], str):
+                raise ValueError(
+                    f"'tunnelGateway' in instance '{instance_name}' must be a string or null"
+                )
 
 # checks for duplicate keys
 def CheckForDupKey(ordered_pairs):
@@ -246,6 +253,13 @@ class Instance:
        self.Port = 0
        self.PortForward = data['instances'][instanceName]["portForward"]
        self.WGPort = data['instances'][instanceName]["opnsenseWGPort"]
+       
+       self.TunnelGateway = (
+           data['instances'][instanceName].get("tunnelGateway")
+           if data['instances'][instanceName].get("tunnelGateway") is not None
+           else data.get("tunnelGateway")
+       )       
+       
        self.WGUUID = ""
        self.WGPubkey = ""
        self.WGIP = "192.0.0.2"
@@ -583,7 +597,7 @@ for instance_obj in instances_array:
     logger.debug(f"wgServer: {state.wgCn} {state.wgIp}")
 
     # If DUAL WAN, some people want to force a gateway
-    if config["tunnelGateway"] is not None:
+    if instance_obj.TunnelGateway is not None:
         logger.debug("tunnelGateway has been configured, will setup static route for PIA tunnel, to enforce outgoing gateway")
         try:
             request = GetRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/searchRoute/")
@@ -606,7 +620,7 @@ for instance_obj in instances_array:
                 "route": {
                     "disabled": '0',
                     "network": state.wgIp + '/32',
-                    "gateway": config['tunnelGateway'],
+                    "gateway": instance_obj.TunnelGateway,
                     "descr": instance_obj.WGPeerName
                 }
             }
@@ -632,12 +646,12 @@ for instance_obj in instances_array:
                 if currentRoute['route']['gateway'][gateway]['selected'] == 1:
                     currentGateway = gateway
             
-            logger.debug(f"Current Gateway: {str(currentGateway)} - Required Gateway: {str(config['tunnelGateway'])}")
+            logger.debug(f"Current Gateway: {str(currentGateway)} - Required Gateway: {str(instance_obj.TunnelGateway)}")
             logger.debug(f"Current Routed IP: {str(currentRoutedIP)} - Required Routed IP: {str(state.wgIp)}")
-            if currentGateway is not config['tunnelGateway'] or currentRoutedIP is not state.wgIp:
+            if currentGateway is not instance_obj.TunnelGateway or currentRoutedIP is not state.wgIp:
                 logger.debug("Static route requires updating")
                 currentRoute['route']['network'] = state.wgIp+'/32'
-                currentRoute['route']['gateway'] = config['tunnelGateway']
+                currentRoute['route']['gateway'] = instance_obj.TunnelGateway
                 currentRoute['route']['disabled'] = 0
                 try:
                     request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/setRoute/{opnsenseRouteUUID}", currentRoute)
@@ -661,7 +675,7 @@ for instance_obj in instances_array:
             if reconfigure['status'] != "ok":
                 logger.error(f"route reconfigure - Error message: {str(reconfigure)}")
                 sys.exit(1)
-            logger.debug(f"PIA tunnel ip {state.wgIp} now set to route over WAN gateway {config['tunnelGateway']} via static route")
+            logger.debug(f"PIA tunnel ip {state.wgIp} now set to route over WAN gateway {instance_obj.TunnelGateway} via static route")
     # If non DIP get auth token from global API
     if instance_obj.Dip == False:
         # Get PIA token from global API - Tokens last 24 hours, so we can make our requests for WG connection information and port if required

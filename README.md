@@ -186,7 +186,7 @@ To use port forwarding Enable `portForward` variable in the json file for the in
 If you need a way to find out this port for an internal application, you can go to the following URL of your OPNsense to get the port, as its published publicly to devices that can reach the HTTPS port of OPNsense
 https://opnsense.lan/wg0_port.txt
 
-Note: Not all server locations support port forwarding.
+Note: Not all server locations support port forwarding. If you enable `portForward` for an instance in a region that doesn't support it, the script will log a warning and skip requesting a port for that instance, rather than making requests the PIA server will refuse. You can check which regions support it with `--listregions`.
 
 ***Dedicated IP***
 ===

@@ -177,6 +177,24 @@ def PIAServerList():
     except ValueError as e:
         raise ValueError(f"GET Request: Failed {str(e)}")
 
+def GetServerList():
+    """
+    Returns PIA's server list, only fetching it the first time it's asked for, as it isn't needed on every run
+    """
+    global serverList
+    if serverList is None:
+        serverList = PIAServerList()
+    return serverList
+
+def RegionPortForward(regionId):
+    """
+    Checks PIA's server list to see if a region supports port forwarding, returns None if the region can't be found
+    """
+    for region in GetServerList():
+        if region['id'] == regionId:
+            return region.get('port_forward')
+    return None
+
 def PIAToken(data):
     try:
         url = state.tokenApi
@@ -288,6 +306,8 @@ class State:
     metaIp = ''
     wgCn = ''
     wgIp = ''
+    regionId = ''
+    regionPortForward = None
 
 # Fixes bug in python requests where this env is preferred over Verify=False
 if 'REQUESTS_CA_BUNDLE' in os.environ:
@@ -490,9 +510,10 @@ for instance_obj in instances_array:
         instance_obj.ServerChange = True
 
 # Populate PIA server list
+serverList = None
 if any(instance_obj.ServerChange for instance_obj in instances_array):
     try:
-        serverList = PIAServerList()
+        GetServerList()
     except ValueError as e:
         logger.debug(f"Failed to get PIA Server List: {str(e)}")
         sys.exit(1)
@@ -532,6 +553,8 @@ for instance_obj in instances_array:
     state.metaIp = ''
     state.wgCn = ''
     state.wgIp = ''
+    state.regionId = ''
+    state.regionPortForward = None
     # If DIP we need to login to the PIA global API and get the DIP info.
     # First we authenicate then ask the DIP API for it's details.
     if instance_obj.Dip:
@@ -559,6 +582,8 @@ for instance_obj in instances_array:
             if region['id'] == dipDetails['id']:
                 state.metaCn = region['servers']['meta'][0]['cn']
                 state.metaIp = region['servers']['meta'][0]['ip']
+                state.regionId = region['id']
+                state.regionPortForward = region.get('port_forward')
 
         # couldn't find region, make sure the piaRegionId is set correctly
         if state.metaCn == '':
@@ -573,6 +598,8 @@ for instance_obj in instances_array:
                 state.metaIp = region['servers']['meta'][0]['ip']
                 state.wgCn = region['servers']['wg'][0]['cn']
                 state.wgIp = region['servers']['wg'][0]['ip']
+                state.regionId = region['id']
+                state.regionPortForward = region.get('port_forward')
 
         # couldn't find region, make sure the piaRegionId is set correctly
         if state.metaCn == '':
@@ -581,6 +608,12 @@ for instance_obj in instances_array:
 
     logger.debug(f"metaServer: {state.metaCn} {state.metaIp}")
     logger.debug(f"wgServer: {state.wgCn} {state.wgIp}")
+
+    # PIA don't offer port forwarding in every region, so don't ask this region's servers for a port if it isn't supported
+    if instance_obj.PortForward and state.regionPortForward is False:
+        logger.warning(f"{instance_obj.Name} has portForward enabled, but PIA region {state.regionId} doesn't support port forwarding, so no port will be requested. " +
+        "Either set portForward to false for this instance, or pick a region that supports it (see --listregions)")
+        instance_obj.PortForward = False
 
     # If DUAL WAN, some people want to force a gateway
     if config["tunnelGateway"] is not None:
@@ -714,8 +747,11 @@ for instance_obj in instances_array:
         continue
 
     # Write wireguard connection information to file, for later use.
-    # we need to add server name as well
+    # we need to add server name as well, plus the region details so the port forward section knows if the
+    # region we're connected to supports port forwarding, without having to pull the server list every run
     wireguardServerInfo['server_name'] = state.wgCn
+    wireguardServerInfo['region_id'] = state.regionId
+    wireguardServerInfo['region_port_forward'] = state.regionPortForward
     with open(instance_obj.InfoFile(), 'w') as filetowrite:
         filetowrite.write(json.dumps(wireguardServerInfo))
         logger.debug(f"Saved wireguard server information to {instance_obj.InfoFile()}")
@@ -863,7 +899,32 @@ for instance_obj in instances_array:
     else:
         logger.debug(f"wireguard server information missing for port forward {instance_obj.InfoFile()}")
         sys.exit(2)
-    
+
+    # PIA don't offer port forwarding in every region, so check the region of the server we're currently connected to
+    # supports it, otherwise the port forward requests will just be refused by the PIA server
+    regionPortForward = wireguardServerInfo.get('region_port_forward')
+    if regionPortForward is None:
+        # Server information file was written before we started recording this, so look the region up and store it.
+        # A DIP's region comes from PIA rather than the config, so if it isn't in the file we can't look it up here,
+        # it'll get recorded the next time the instance changes server.
+        regionId = wireguardServerInfo.get('region_id', '' if instance_obj.Dip else instance_obj.Region)
+        if regionId != '':
+            try:
+                regionPortForward = RegionPortForward(regionId)
+            except ValueError as e:
+                logger.error(f"Failed to get PIA Server List: {str(e)}")
+                sys.exit(1)
+        if regionPortForward is not None:
+            wireguardServerInfo['region_id'] = regionId
+            wireguardServerInfo['region_port_forward'] = regionPortForward
+            with open(instance_obj.InfoFile(), 'w') as filetowrite:
+                filetowrite.write(json.dumps(wireguardServerInfo))
+                logger.debug(f"Saved region port forward support to {instance_obj.InfoFile()}")
+    if regionPortForward is False:
+        logger.warning(f"{instance_obj.Name} has portForward enabled, but PIA region {wireguardServerInfo.get('region_id')} doesn't support port forwarding, so no port will be requested. " +
+        "Either set portForward to false for this instance, or pick a region that supports it (see --listregions)")
+        continue
+
     # store retrieved port in this file, so external services can easily get it
     if os.path.isfile(instance_obj.WebPortFile()) is False:
         newPortRequired = True

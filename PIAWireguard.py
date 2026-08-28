@@ -369,7 +369,7 @@ class Instance:
        self.WGPort = data['instances'][instanceName]["opnsenseWGPort"]
        self.WGUUID = ""
        self.WGPubkey = ""
-       self.WGIP = "192.0.0.2"
+       self.WGIP = "192.0.0.2/32" # needs a netmask, OPNsense rejects bare addresses on server.tunneladdress
        self.WGGateway = "192.0.0.1"
        self.WGInstance = ""
        self.WGInstanceName = f"{data['opnsenseWGPrefixName']}-{instanceName}"

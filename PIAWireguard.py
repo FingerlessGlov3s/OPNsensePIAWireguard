@@ -220,6 +220,109 @@ def CheckIpInRoutes(ip, exemptNetif):
     except subprocess.CalledProcessError as e:
         raise ValueError(f"Error running netstat: {e}")
 
+def ConfigureTunnelStaticRoute(instance_obj, wgIp):
+    """
+    If DUAL WAN, some people want to force a gateway, so create/update a static route for the PIA server we're
+    about to connect to, making sure it goes out of the WAN gateway they've configured.
+    """
+    logger.debug("tunnelGateway has been configured, will setup static route for PIA tunnel, to enforce outgoing gateway")
+    try:
+        request = GetRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/searchRoute/")
+    except ValueError as e:
+        raise ValueError(f"searchRoute - Error message: {str(e)}")
+
+    opnsenseRoutes = json.loads(request.text)['rows']
+    opnsenseRouteUUID = ''
+    for route in opnsenseRoutes:
+        if route['descr'] == instance_obj.WGPeerName:
+            opnsenseRouteUUID = route['uuid']
+            break
+
+    # if the PIA server route can't be found create it
+    routeUpdated = False
+    if opnsenseRouteUUID == '':
+        logger.debug("Creating static route as does not exist")
+        createObject = {
+            "route": {
+                "disabled": '0',
+                "network": wgIp + '/32',
+                "gateway": config['tunnelGateway'],
+                "descr": instance_obj.WGPeerName
+            }
+        }
+        try:
+            request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/addRoute/", createObject)
+        except ValueError as e:
+            raise ValueError(f"addRoute - Error message: {str(e)}")
+        addRoute = json.loads(request.text)
+        if addRoute['result'] != "saved":
+            raise ValueError(f"addRoute - Error message: {str(addRoute)}")
+        routeUpdated = True
+    else:
+        try:
+            request = GetRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/getRoute/{opnsenseRouteUUID}")
+        except ValueError as e:
+            raise ValueError(f"getRoute - Error message: {str(e)}")
+        currentRoute = json.loads(request.text)
+        currentRoutedIP = currentRoute['route']['network']
+        currentGateway = ''
+        for gateway in currentRoute['route']['gateway']:
+            if currentRoute['route']['gateway'][gateway]['selected'] == 1:
+                currentGateway = gateway
+
+        logger.debug(f"Current Gateway: {str(currentGateway)} - Required Gateway: {str(config['tunnelGateway'])}")
+        logger.debug(f"Current Routed IP: {str(currentRoutedIP)} - Required Routed IP: {str(wgIp)}")
+        if currentGateway is not config['tunnelGateway'] or currentRoutedIP is not wgIp:
+            logger.debug("Static route requires updating")
+            currentRoute['route']['network'] = wgIp+'/32'
+            currentRoute['route']['gateway'] = config['tunnelGateway']
+            currentRoute['route']['disabled'] = 0
+            try:
+                request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/setRoute/{opnsenseRouteUUID}", currentRoute)
+            except ValueError as e:
+                raise ValueError(f"setRoute - Error message: {str(e)}")
+            setRoute = json.loads(request.text)
+            if setRoute['result'] != "saved":
+                raise ValueError(f"setRoute - Error message: {str(setRoute)}")
+            routeUpdated = True
+
+    if routeUpdated:
+        createObject = {}
+        try:
+            request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/reconfigure/", createObject)
+        except ValueError as e:
+            raise ValueError(f"route reconfigure - Error message: {str(e)}")
+        reconfigure = json.loads(request.text)
+        if reconfigure['status'] != "ok":
+            raise ValueError(f"route reconfigure - Error message: {str(reconfigure)}")
+        logger.debug(f"PIA tunnel ip {wgIp} now set to route over WAN gateway {config['tunnelGateway']} via static route")
+
+def PIAAddKey(instance_obj, wgCn, wgIp):
+    """
+    Asks a PIA WireGuard server for our connection information, registering our public key with it.
+    If we're using a DIP we need to authenicate using DIP token, otherwise we use the PIA Token.
+    """
+    if instance_obj.Dip:
+        piaMetaSession = CreateRequestsSession((f"dedicated_ip_{instance_obj.DipToken}", wgIp), None, state.ca)
+        createObject = {
+            "pubkey": instance_obj.WGPubkey
+        }
+        try:
+            request = GetRequest(piaMetaSession, f"https://{wgCn}:1337/addKey", createObject)
+        except ValueError as e:
+            raise ValueError(f"addKey DIP - Error message: {str(e)}")
+    else:
+        piaMetaSession = CreateRequestsSession(None, None, state.ca)
+        createObject = {
+            "pt": state.token,
+            "pubkey": instance_obj.WGPubkey
+        }
+        try:
+            request = GetRequest(piaMetaSession, f"https://{wgCn}:1337/addKey", createObject)
+        except ValueError as e:
+            raise ValueError(f"addKey non-DIP - Error message: {str(e)}")
+    return json.loads(request.text)
+
 def InformNewIP(interfaceName):
     try:
         subprocess.run(['/usr/local/sbin/configctl', 'interface', 'newip', interfaceName, 'force'], capture_output=True, text=True, check=True)
@@ -279,6 +382,7 @@ class Instance:
        self.PiaPortUUID = ""
        self.RouteUUID = ""
        self.ServerChange = True
+       self.ServerChangeFailed = False
        self.PostConfigScript = data['instances'][instanceName].get("postConfigScript", False)
     def __str__(self):
         instance_dict = {"Instance": self.WGInstanceName}
@@ -306,6 +410,7 @@ class State:
     metaIp = ''
     wgCn = ''
     wgIp = ''
+    wgCandidates = []
     regionId = ''
     regionPortForward = None
 
@@ -509,6 +614,10 @@ for instance_obj in instances_array:
         logger.debug(f"{instance_obj.Name} tunnel gateway file missing, change server requested")
         instance_obj.ServerChange = True
 
+# Gateway IPs we've committed to a tunnel during this run. The routing table check below only sees a gateway once
+# OPNsense has actually applied it, so we track them here too, otherwise a later instance could pick the same one.
+assignedVips = set()
+
 # Populate PIA server list
 serverList = None
 if any(instance_obj.ServerChange for instance_obj in instances_array):
@@ -553,6 +662,7 @@ for instance_obj in instances_array:
     state.metaIp = ''
     state.wgCn = ''
     state.wgIp = ''
+    state.wgCandidates = []
     state.regionId = ''
     state.regionPortForward = None
     # If DIP we need to login to the PIA global API and get the DIP info.
@@ -576,6 +686,8 @@ for instance_obj in instances_array:
 
         state.wgCn = dipDetails['cn']
         state.wgIp = dipDetails['ip']
+        # A DIP is one fixed server, so there's only ever the one to try
+        state.wgCandidates = [{'cn': dipDetails['cn'], 'ip': dipDetails['ip']}]
 
         # The DIP will belong to a region, so we need to find current region's meta server from the global server list.
         for region in serverList:
@@ -584,6 +696,7 @@ for instance_obj in instances_array:
                 state.metaIp = region['servers']['meta'][0]['ip']
                 state.regionId = region['id']
                 state.regionPortForward = region.get('port_forward')
+                break
 
         # couldn't find region, make sure the piaRegionId is set correctly
         if state.metaCn == '':
@@ -591,20 +704,31 @@ for instance_obj in instances_array:
             sys.exit(2)
     else:
         # Look for a pia server in the region we want.
-        # PIA API will give us one server per region, PIA will try give us the best one
+        # PIA give us a handful of servers per region, which they consider to be the current best ones.
+        # We take the first one, but keep the rest so we can fall back to them if the gateway IP we're given clashes
+        # with another tunnel.
         for region in serverList:
             if region['id'] == instance_obj.Region:
                 state.metaCn = region['servers']['meta'][0]['cn']
                 state.metaIp = region['servers']['meta'][0]['ip']
-                state.wgCn = region['servers']['wg'][0]['cn']
-                state.wgIp = region['servers']['wg'][0]['ip']
+                state.wgCandidates = region['servers']['wg']
                 state.regionId = region['id']
                 state.regionPortForward = region.get('port_forward')
+                break
 
         # couldn't find region, make sure the piaRegionId is set correctly
         if state.metaCn == '':
             logger.error(f"region {instance_obj.Region} not found, is the correct region for the instance set")
             sys.exit(2)
+
+    # PIA didn't give us any wireguard servers to try for this region
+    if len(state.wgCandidates) == 0:
+        logger.error(f"{instance_obj.Name} - PIA didn't list any WireGuard servers for region {state.regionId}, will try again next time")
+        instance_obj.ServerChangeFailed = True
+        continue
+
+    state.wgCn = state.wgCandidates[0]['cn']
+    state.wgIp = state.wgCandidates[0]['ip']
 
     logger.debug(f"metaServer: {state.metaCn} {state.metaIp}")
     logger.debug(f"wgServer: {state.wgCn} {state.wgIp}")
@@ -615,86 +739,6 @@ for instance_obj in instances_array:
         "Either set portForward to false for this instance, or pick a region that supports it (see --listregions)")
         instance_obj.PortForward = False
 
-    # If DUAL WAN, some people want to force a gateway
-    if config["tunnelGateway"] is not None:
-        logger.debug("tunnelGateway has been configured, will setup static route for PIA tunnel, to enforce outgoing gateway")
-        try:
-            request = GetRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/searchRoute/")
-        except ValueError as e:
-            logger.error(f"searchRoute - Error message: {str(e)}")
-            sys.exit(1)
-
-        opnsenseRoutes = json.loads(request.text)['rows']
-        opnsenseRouteUUID = ''
-        for route in opnsenseRoutes:
-            if route['descr'] == instance_obj.WGPeerName:
-                opnsenseRouteUUID = route['uuid']
-                break
-        
-        # if the PIA server route can't be found create it
-        routeUpdated = False
-        if opnsenseRouteUUID == '':
-            logger.debug("Creating static route as does not exist")
-            createObject = {
-                "route": {
-                    "disabled": '0',
-                    "network": state.wgIp + '/32',
-                    "gateway": config['tunnelGateway'],
-                    "descr": instance_obj.WGPeerName
-                }
-            }
-            try:
-                request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/addRoute/", createObject)
-            except ValueError as e:
-                logger.error(f"addRoute - Error message: {str(e)}")
-                sys.exit(1)
-            addRoute = json.loads(request.text)
-            if addRoute['result'] != "saved":
-                logger.error(f"addRoute - Error message: {str(addRoute)}")
-                sys.exit(1)
-            routeUpdated = True
-        else:
-            try:
-                request = GetRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/getRoute/{opnsenseRouteUUID}")
-            except ValueError as e:
-                logger.error(f"getRoute - Error message: {str(e)}")
-                sys.exit(1)
-            currentRoute = json.loads(request.text)
-            currentRoutedIP = currentRoute['route']['network']
-            for gateway in currentRoute['route']['gateway']:
-                if currentRoute['route']['gateway'][gateway]['selected'] == 1:
-                    currentGateway = gateway
-            
-            logger.debug(f"Current Gateway: {str(currentGateway)} - Required Gateway: {str(config['tunnelGateway'])}")
-            logger.debug(f"Current Routed IP: {str(currentRoutedIP)} - Required Routed IP: {str(state.wgIp)}")
-            if currentGateway is not config['tunnelGateway'] or currentRoutedIP is not state.wgIp:
-                logger.debug("Static route requires updating")
-                currentRoute['route']['network'] = state.wgIp+'/32'
-                currentRoute['route']['gateway'] = config['tunnelGateway']
-                currentRoute['route']['disabled'] = 0
-                try:
-                    request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/setRoute/{opnsenseRouteUUID}", currentRoute)
-                except ValueError as e:
-                    logger.error(f"setRoute - Error message: {str(e)}")
-                    sys.exit(1)
-                setRoute = json.loads(request.text)
-                if setRoute['result'] != "saved":
-                    logger.error(f"setRoute - Error message: {str(setRoute)}")
-                    sys.exit(1)
-                routeUpdated = True
-    
-        if routeUpdated:
-            createObject = {}
-            try:
-                request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/reconfigure/", createObject)
-            except ValueError as e:
-                logger.error(f"route reconfigure - Error message: {str(e)}")
-                sys.exit(1)
-            reconfigure = json.loads(request.text)
-            if reconfigure['status'] != "ok":
-                logger.error(f"route reconfigure - Error message: {str(reconfigure)}")
-                sys.exit(1)
-            logger.debug(f"PIA tunnel ip {state.wgIp} now set to route over WAN gateway {config['tunnelGateway']} via static route")
     # If non DIP get auth token from global API
     if instance_obj.Dip == False:
         # Get PIA token from global API - Tokens last 24 hours, so we can make our requests for WG connection information and port if required
@@ -711,40 +755,52 @@ for instance_obj in instances_array:
 
         logger.debug(f"Your PIA Token, DO NOT GIVE THIS TO ANYONE: {state.token}")
 
-    # Now we have our PIA details, we can now request our WG connection information
-    # because PIA use custom certs which just have a SAN of their name eg london401, we have to put a temporary dns override in, to make it so london401 points to the wg IP
-    override_dns(state.wgCn, state.wgIp)
-    # Get PIA wireguard server connection information
-    
-    # If we're using a DIP we need to authenicate using DIP token, otherwise used the PIA Token
-    if instance_obj.Dip:
-        piaMetaSession = CreateRequestsSession((f"dedicated_ip_{instance_obj.DipToken}",state.wgIp), None, state.ca)
-        createObject = {
-            "pubkey": instance_obj.WGPubkey
-        }
-        try:
-            request = GetRequest(piaMetaSession, f"https://{state.wgCn}:1337/addKey", createObject)
-        except ValueError as e:
-            logger.error(f"addKey DIP - Error message: {str(e)}")
-            sys.exit(1)
-    else:
-        piaMetaSession = CreateRequestsSession(None, None, state.ca)
-        createObject = {
-            "pt": state.token,
-            "pubkey": instance_obj.WGPubkey
-        }
-        try:
-            request = GetRequest(piaMetaSession, f"https://{state.wgCn}:1337/addKey", createObject)
-        except ValueError as e:
-            logger.error(f"addKey non-DIP - Error message: {str(e)}")
-            sys.exit(1)
-    wireguardServerInfo = json.loads(request.text)
+    # Each PIA server gives us a gateway IP (server_vip) and two tunnels can't share one, so work through the servers
+    # PIA gave us for this region until we find one whose gateway IP isn't already in use by another tunnel.
+    wireguardServerInfo = None
+    triedServers = []
+    for candidate in state.wgCandidates:
+        state.wgCn = candidate['cn']
+        state.wgIp = candidate['ip']
+        triedServers.append(state.wgCn)
+        logger.debug(f"Trying PIA wg server {state.wgCn} ({state.wgIp}) for {instance_obj.Name}")
 
-    # We must check if the gateway IP given by PIA isn't already in use by another tunnel.
-    if CheckIpInRoutes(wireguardServerInfo['server_vip'], f"wg{instance_obj.WGInstance}"):
+        # If DUAL WAN, some people want to force a gateway
+        if config["tunnelGateway"] is not None:
+            try:
+                ConfigureTunnelStaticRoute(instance_obj, state.wgIp)
+            except ValueError as e:
+                logger.error(str(e))
+                sys.exit(1)
+
+        # Now we have our PIA details, we can now request our WG connection information
+        # because PIA use custom certs which just have a SAN of their name eg london401, we have to put a temporary dns override in, to make it so london401 points to the wg IP
+        override_dns(state.wgCn, state.wgIp)
+        # Get PIA wireguard server connection information
+        try:
+            candidateServerInfo = PIAAddKey(instance_obj, state.wgCn, state.wgIp)
+        except ValueError as e:
+            logger.error(str(e))
+            sys.exit(1)
+
+        # We must check if the gateway IP given by PIA isn't already in use by another tunnel.
+        serverVip = candidateServerInfo['server_vip']
+        if serverVip in assignedVips or CheckIpInRoutes(serverVip, f"wg{instance_obj.WGInstance}"):
+            logger.warning(f"{instance_obj.Name} - the gateway IP {serverVip} given by PIA server {state.wgCn} is already in use by another tunnel, trying the next server in region {state.regionId}")
+            continue
+
+        wireguardServerInfo = candidateServerInfo
+        break
+
+    # Every server PIA offered for this region clashed with another tunnel. PIA's server list is a snapshot of the
+    # servers they currently consider best, so the next run will likely be offered different servers to try.
+    if wireguardServerInfo is None:
         logger.error(f"{instance_obj.Name} encountered a problem")
-        logger.error(f"The new gateway IP {wireguardServerInfo['server_vip']} is an exact match for at least one current route, can not configure this tunnel, will try again next time.")
+        logger.error(f"Every PIA server tried in region {state.regionId} ({', '.join(triedServers)}) gave a gateway IP that is already in use by another tunnel, can not configure this tunnel, will try again next time.")
+        instance_obj.ServerChangeFailed = True
         continue
+
+    assignedVips.add(wireguardServerInfo['server_vip'])
 
     # Write wireguard connection information to file, for later use.
     # we need to add server name as well, plus the region details so the port forward section knows if the
@@ -870,6 +926,11 @@ if any(instance.PortForward and instance.ServerChange for instance in instances_
 # check each instance for portforwarding
 for instance_obj in instances_array:
     if instance_obj.PortForward == False:
+        continue
+
+    # The port forward requests go over the tunnel, so there's no point trying if we couldn't configure it this run
+    if instance_obj.ServerChangeFailed:
+        logger.debug(f"Skipping port forward for tunnel instance {instance_obj.Name}, as its tunnel could not be configured this run")
         continue
 
     logger.debug(f"Processing port forward for tunnel instance {instance_obj.Name}")
@@ -1109,7 +1170,7 @@ for instance_obj in instances_array:
     logger.debug(f"Finished processing port forward for tunnel instance {instance_obj.Name}")
 
 for instance_obj in instances_array:
-    if instance_obj.PostConfigScript:
+    if instance_obj.PostConfigScript and instance_obj.ServerChangeFailed == False:
         if instance_obj.ServerChange or instance_obj.Port != 0:
             logger.debug(f"Running post configuration script for {instance_obj.Name}")
 

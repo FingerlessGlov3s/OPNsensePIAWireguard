@@ -61,6 +61,16 @@ def validate_json(data):
     if not name_pattern.match(data['opnsenseWGPrefixName']):
         raise ValueError(f"Invalid opnsenseWGPrefixName value '{data['opnsenseWGPrefixName']}'")
 
+    # tunnelGateway is optional, a missing key means the same as null (no forced outgoing gateway)
+    tunnelGateway = data.get("tunnelGateway")
+    if tunnelGateway is not None and (not isinstance(tunnelGateway, str) or not tunnelGateway.strip()):
+        raise ValueError("Property 'tunnelGateway' must be null or the non-blank name of a WAN gateway")
+
+    # Warn about keys we don't recognise, so typos and made up settings don't silently do nothing
+    for key in data:
+        if key not in required_keys and key != "tunnelGateway":
+            logger.warning(f"Unknown config key '{key}' will be ignored, check the README for the supported settings")
+
     # Validate 'instances'
     instances = data.get("instances", {})
     if not isinstance(instances, dict) or not 1 <= len(instances) <= 10:
@@ -80,6 +90,10 @@ def validate_json(data):
             if prop not in instance_data:
                 raise ValueError(f"Missing required property '{prop}' in instance '{instance_name}'")
 
+        for prop in instance_data:
+            if prop not in required_instance_properties and prop != "postConfigScript":
+                logger.warning(f"Unknown property '{prop}' in instance '{instance_name}' will be ignored, check the README for the supported settings")
+
         # Additional checks for property types and values
         if not isinstance(instance_data["regionId"], str) or not instance_data["regionId"].strip():
             raise ValueError(f"'regionId' in instance '{instance_name}' must be a non-blank string")
@@ -94,8 +108,8 @@ def validate_json(data):
             raise ValueError(f"'postConfigScript' in instance '{instance_name}' must be a non-blank string to an executable file")
 
         opnsenseWGPort = instance_data.get("opnsenseWGPort", "")
-        if not (opnsenseWGPort.isdigit() and 1 <= int(opnsenseWGPort) <= 65535):
-            raise ValueError(f"'opnsenseWGPort' in instance '{instance_name}' must be a number between 1 and 65535")
+        if not (isinstance(opnsenseWGPort, str) and opnsenseWGPort.isdigit() and 1 <= int(opnsenseWGPort) <= 65535):
+            raise ValueError(f"'opnsenseWGPort' in instance '{instance_name}' must be a number between 1 and 65535, in double quotes")
         if opnsenseWGPort in opnsenseWGPorts:
             raise ValueError(f"Duplicate opnsenseWGPort found: '{opnsenseWGPort}' in instance '{instance_name}'")
         opnsenseWGPorts.add(opnsenseWGPort)
@@ -226,6 +240,7 @@ def ConfigureTunnelStaticRoute(instance_obj, wgIp):
     about to connect to, making sure it goes out of the WAN gateway they've configured.
     """
     logger.debug("tunnelGateway has been configured, will setup static route for PIA tunnel, to enforce outgoing gateway")
+    tunnelGateway = config.get('tunnelGateway')
     try:
         request = GetRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/searchRoute/")
     except ValueError as e:
@@ -246,7 +261,7 @@ def ConfigureTunnelStaticRoute(instance_obj, wgIp):
             "route": {
                 "disabled": '0',
                 "network": wgIp + '/32',
-                "gateway": config['tunnelGateway'],
+                "gateway": tunnelGateway,
                 "descr": instance_obj.WGPeerName
             }
         }
@@ -270,12 +285,12 @@ def ConfigureTunnelStaticRoute(instance_obj, wgIp):
             if currentRoute['route']['gateway'][gateway]['selected'] == 1:
                 currentGateway = gateway
 
-        logger.debug(f"Current Gateway: {str(currentGateway)} - Required Gateway: {str(config['tunnelGateway'])}")
-        logger.debug(f"Current Routed IP: {str(currentRoutedIP)} - Required Routed IP: {str(wgIp)}")
-        if currentGateway is not config['tunnelGateway'] or currentRoutedIP is not wgIp:
+        logger.debug(f"Current Gateway: {str(currentGateway)} - Required Gateway: {str(tunnelGateway)}")
+        logger.debug(f"Current Routed IP: {str(currentRoutedIP)} - Required Routed IP: {wgIp}/32")
+        if currentGateway != tunnelGateway or currentRoutedIP != wgIp + '/32':
             logger.debug("Static route requires updating")
             currentRoute['route']['network'] = wgIp+'/32'
-            currentRoute['route']['gateway'] = config['tunnelGateway']
+            currentRoute['route']['gateway'] = tunnelGateway
             currentRoute['route']['disabled'] = 0
             try:
                 request = PostRequest(opnsenseRequestsSession, f"{config['opnsenseURL']}/api/routes/routes/setRoute/{opnsenseRouteUUID}", currentRoute)
@@ -295,7 +310,7 @@ def ConfigureTunnelStaticRoute(instance_obj, wgIp):
         reconfigure = json.loads(request.text)
         if reconfigure['status'] != "ok":
             raise ValueError(f"route reconfigure - Error message: {str(reconfigure)}")
-        logger.debug(f"PIA tunnel ip {wgIp} now set to route over WAN gateway {config['tunnelGateway']} via static route")
+        logger.debug(f"PIA tunnel ip {wgIp} now set to route over WAN gateway {tunnelGateway} via static route")
 
 def PIAAddKey(instance_obj, wgCn, wgIp):
     """
@@ -765,8 +780,8 @@ for instance_obj in instances_array:
         triedServers.append(state.wgCn)
         logger.debug(f"Trying PIA wg server {state.wgCn} ({state.wgIp}) for {instance_obj.Name}")
 
-        # If DUAL WAN, some people want to force a gateway
-        if config["tunnelGateway"] is not None:
+        # If DUAL WAN, some people want to force a gateway. Key is optional, absent behaves the same as null.
+        if config.get("tunnelGateway") is not None:
             try:
                 ConfigureTunnelStaticRoute(instance_obj, state.wgIp)
             except ValueError as e:

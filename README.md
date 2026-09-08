@@ -53,8 +53,17 @@ You can also create a CRON job, allowing you to manually change the PIA server y
         - `piaPassword` Your PIA password
         - `instances` As we support creation of multiple tunnels, Example config has one instance but you can have as many as you like. The `instances` are key value pairs. Change `instancename` to something like `london` if you using the `uk` region since but the instance name can be what you'd like it to be.
         - `regionId` Change to your PIA region id (see below for details)
+        - `opnsenseWGPort` outgoing port for OPNsense, this needs to be different for each tunnel and not already be in use for something else on OPNsense. Keep the double quotes around the number.
+    1. These variables are already in the example config, set to a sensible default. Leave them as they are unless you want the feature:
+        - `opnsenseWGPrefixName` Prefix used to name the objects the script creates in OPNsense: the WireGuard instance and peer become `pia-instancename` and `pia-instancename-server`, and the port forward alias becomes `pia_instancename_port`. Letters, numbers and underscores only. Only change this before your first run, changing it later will leave the previously created OPNsense objects behind.
         - `portForward` Enable port forwarding (note region support required)
-        - `opnsenseWGPort` outgoing port for OPNsense, this needs to be different for each tunnel and not already be in use for something else on OPNsense
+        - `dip` and `dipToken` Only if you've purchased a PIA Dedicated IP (see [Dedicated IP](#dedicated-ip) below), otherwise leave as `false` and `""`.
+    1. These variables are optional and deliberately not in the example config. Only add them if you want the feature, otherwise don't put them in the file at all:
+        - `tunnelGateway` Only needed if you run multiple WANs and want the tunnel to go out of a specific one (see [Set outgoing tunnel gateway](#set-outgoing-tunnel-gateway-outgoing-interface) below).
+        - `postConfigScript` Only needed if you want a script run after the tunnel is configured (see [Post configuration script](#post-configuration-script) below).
+    1. Notes on the config file
+        - The variables listed above are the complete set the script understands. Anything else is ignored, and the script will log a warning telling you the key was not recognised, so check the log if a setting doesn't seem to do anything.
+        - **The `wg0` / `wg1` device number is not a config variable.** You assign it in the OPNsense WebUI later on in this guide, and the script works out which one belongs to each instance by itself. There is no `interface` setting.
     1. Region ID info
         - You can get your PIA region id by running `ListRegions.py` on your local device. 
         - If you don't have Python installed on your local device you can use this [Online Python Tool](https://trinket.io/embed/python3/5bfe65475964) 
@@ -141,7 +150,6 @@ Example config
     "opnsenseSecret": "p+Gi4uE1xypuGIptbhrDylGKcNd9vaRpQ298eH0k6SFRQ6Crw4fLk0cIA0eSuKvWEN0hKx8JaIGUtNPq",
     "piaUsername": "p1234567",
     "piaPassword": "EncryptAllTheThings",
-    "tunnelGateway": null,
     "opnsenseWGPrefixName": "pia",
     "instances": {
         "london": {
@@ -200,9 +208,17 @@ Note: I have not tested DIP in a while, so if this works for you let me know, if
 ===
 In some deployments, people may be running dual or even triple WAN configurations, in this case due to how WireGuard is configured in FreeBSD (OPNsense), it'll route the PIA tunnel over the default WAN interface. Some people will want to change this to use another WAN interface as the gateway to route the PIA tunnel over.
 
-To accommodate this functionality, this is built in to the script. You will need to get the name of your wanted gateway, for example `WAN2_DHCP`, then set this as the `tunnelGateway` variable value in the json file (value needs to be in double quotes). When the script then runs it'll add/change a static route to enforce the PIA tunnel to use that gateway (interface).
+To accommodate this functionality, this is built in to the script. You will need to get the name of your wanted gateway, for example `WAN2_DHCP`, then add a `tunnelGateway` variable to the json file with that name as its value (value needs to be in double quotes). When the script then runs it'll add/change a static route to enforce the PIA tunnel to use that gateway (interface).
+
+```json
+    "tunnelGateway": "WAN2_DHCP",
+```
 
 You'll find your gateway names in `System: Gateways: Single`, making sure its the IPv4 one.
+
+**This must be one of your WAN gateways, not the PIA gateway.** The value names the gateway used to *reach* the PIA server, so the static route the script creates sends traffic for the PIA server IP out of that WAN. Do not put in the gateway you created for the PIA tunnel itself (the `WAN_PIA_INSTANCENAME_IPv4` one from the setup steps), that would try to route the PIA server through the very tunnel it's needed to build, and your tunnel won't come up.
+
+If you have a single WAN you don't need this at all, so leave `tunnelGateway` out of your json file entirely and OPNsense will route the tunnel out of your default WAN. Older configs set it to `null` to mean the same thing, which still works, but leaving the variable out is the simpler option.
 
 ***Set VPN Kill Switch***
 ===

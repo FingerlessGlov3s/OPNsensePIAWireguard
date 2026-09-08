@@ -4,7 +4,6 @@
     "opnsenseSecret": "",
     "piaUsername": "",
     "piaPassword": "",
-    "tunnelGateway": null,
     "opnsenseWGPrefixName": "pia",
     "instances": {
         "instancename": {
